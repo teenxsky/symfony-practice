@@ -8,11 +8,15 @@ build-dev:
 
 # Starts the services in detached mode
 up-dev:
-	$(DOCKER_COMPOSE_DEV) up -d
+	$(DOCKER_COMPOSE_DEV) up -d --watch
 
 # Starts the services and logs are displayed.
 up-logs-dev:
-	$(DOCKER_COMPOSE_DEV) up
+	$(DOCKER_COMPOSE_DEV) up --watch
+
+# Stops the services
+down-dev:
+	$(DOCKER_COMPOSE_DEV) down
 
 # Stops and removes all containers, networks, volumes, and images
 clean-dev:
@@ -33,3 +37,7 @@ migrate-dev:
 # Creates database backup (dumb.sql)
 make-dumb-dev:
 	$(DOCKER_COMPOSE_DEV) exec database bash -c 'PGPASSWORD="admin" pg_dump --username $(POSTGRES_USER) app > /docker-entrypoint-initdb.d/dumb__$$(date +%H:%M:%S__%d-%m-%Y).sql'
+
+# Open shell in the backend container
+shell-backend-dev:
+	$(DOCKER_COMPOSE_DEV) exec backend bash

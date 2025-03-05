@@ -1,4 +1,19 @@
-FROM php:8.2-fpm-alpine
+# Install dev dependencies stage
+FROM composer:latest AS deps
+WORKDIR /app
+
+RUN --mount=type=bind,source=composer.json,target=composer.json \
+    --mount=type=bind,source=composer.lock,target=composer.lock \
+    --mount=type=cache,target=/tmp/cache \
+    composer install --no-interaction --no-scripts
+
+
+# Build PHP app stage
+FROM php:8.2-fpm-alpine AS builder
+WORKDIR /var/www/app
+
+COPY --from=deps /app/vendor ./vendor
+COPY . .
 
 RUN apk update && apk add --no-cache \
     libzip-dev \
@@ -19,7 +34,5 @@ RUN docker-php-ext-install \
 COPY ./.docker/dev/php/entrypoint.sh /usr/local/entrypoint.sh
 RUN chmod +x /usr/local/entrypoint.sh
 ENTRYPOINT ["sh", "/usr/local/entrypoint.sh"]
-
-WORKDIR /var/www/app
 
 CMD [ "php-fpm", "--fpm-config", "/usr/local/etc/php-fpm.conf" ]

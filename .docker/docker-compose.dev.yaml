@@ -23,7 +23,12 @@ services:
       context: ./../
       dockerfile: ./.docker/dev/php/Dockerfile
     volumes:
-      - ./../:/var/www/app
+      - php-deps:/var/www/app/vendor/
+    develop:
+      watch:
+        - path: ./../
+          action: sync
+          target: /var/www/app
     depends_on:
       database:
         condition: service_healthy
@@ -51,3 +56,4 @@ services:
 
 volumes:
   pg-data:
+  php-deps:
