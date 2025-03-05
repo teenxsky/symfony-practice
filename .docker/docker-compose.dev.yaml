@@ -1,0 +1,53 @@
+name: symfony-dev
+
+services:
+  nginx:
+    container_name: nginx
+    ports:
+      - 80:80
+    build:
+      context: ./../
+      dockerfile: ./.docker/dev/nginx/Dockerfile
+    volumes:
+      - ./../public:/var/www/app/public
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+
+  backend:
+    container_name: php
+    expose:
+      - 9000
+    build:
+      context: ./../
+      dockerfile: ./.docker/dev/php/Dockerfile
+    volumes:
+      - ./../:/var/www/app
+    depends_on:
+      database:
+        condition: service_healthy
+    env_file:
+      - ./../.env.dev
+
+  database:
+    container_name: postgres
+    ports:
+      - 5432:5432
+    build:
+      context: ./../
+      dockerfile: ./.docker/dev/postgresql/Dockerfile
+    volumes:
+      - pg-data:/var/lib/postgresql/data/
+      - ./dev/postgresql/dumbs:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_admin -d app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    env_file:
+      - ./../.env.dev
+
+volumes:
+  pg-data:
