@@ -1,0 +1,60 @@
+name: symfony-app
+
+services:
+  nginx:
+    container_name: nginx
+    ports:
+      - 80:80
+    build:
+      context: ./../
+      dockerfile: ./.docker/nginx/Dockerfile
+    volumes:
+      - ./../public:/var/www/app/public
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+
+  backend:
+    container_name: php
+    expose:
+      - 9000
+    build:
+      context: ./../
+      dockerfile: ./.docker/php/Dockerfile
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+    volumes:
+      - ./../:/var/www/app
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    container_name: postgres
+    ports:
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    build:
+      context: ./../
+      dockerfile: ./.docker/postgresql/Dockerfile
+    volumes:
+      - pg-data:/var/lib/postgresql/data/
+      - ./postgresql/dumps:/docker-entrypoint-initdb.d
+    environment:
+      - TZ=${TZ}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    command: ["postgres", "-c", "port=${POSTGRES_PORT}"]
+    healthcheck:
+      test:
+        ["CMD", "pg_isready", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  pg-data:

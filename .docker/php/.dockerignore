@@ -1,0 +1,23 @@
+# Project files
+.git/
+LICENSE
+Makefile
+README.md
+**/dumps*
+**/.gitignore
+
+# OS
+.Trashes
+.DS_Store
+Thumbs.db
+.LSOverride
+.AppleDouble
+
+# IDE
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
