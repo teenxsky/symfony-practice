@@ -24,6 +24,8 @@ services:
       dockerfile: ./.docker/dev/php/Dockerfile
     volumes:
       - php-deps:/var/www/app/vendor/
+    environment:
+      - DATABASE=${DATABASE}
     develop:
       watch:
         - path: ./../
@@ -32,8 +34,6 @@ services:
     depends_on:
       database:
         condition: service_healthy
-    env_file:
-      - ./../.env.dev
 
   database:
     container_name: postgres
@@ -44,15 +44,18 @@ services:
       dockerfile: ./.docker/dev/postgresql/Dockerfile
     volumes:
       - pg-data:/var/lib/postgresql/data/
-      - ./dev/postgresql/dumbs:/docker-entrypoint-initdb.d
+      - ./dev/postgresql/dumps:/docker-entrypoint-initdb.d
+    environment:
+      - TZ=${TZ}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app_admin -d app"]
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 40s
-    env_file:
-      - ./../.env.dev
 
 volumes:
   pg-data:
