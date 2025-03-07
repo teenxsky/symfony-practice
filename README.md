@@ -2,10 +2,35 @@
 
 ## Usage Guide
 
-**Requirements:** 
+### Requirements:
+
 - Docker installed on your machine.
 - Docker Compose installed on your machine.
-- **CONFIGURE .env FILES:** `.env`, `.env.dev`, `.env.test`.
+- **CONFIGURE .env FILES:** `.env`, `.env.dev`, `.env.test`:
+
+1. Make `.env` files from examples :
+
+```bash
+cp .env.example .env
+```
+
+```bash
+cp .env.dev.example .env.dev
+```
+
+```bash
+cp .env.test.example .env.test
+```
+
+2. Create your unique `APP_SECRET` (optional):
+
+```bash
+sed -i "" "/^APP_SECRET=/d" .env && echo "APP_SECRET=$(php -r "print substr(base64_encode(str_shuffle('abcdefghijklmnopqrstuvwxyz0123456789')), 0, 32);")" >> .env
+```
+
+```bash
+sed -i "" "/^APP_SECRET=/d" .env.dev && echo "APP_SECRET=$(php -r "print substr(base64_encode(str_shuffle('abcdefghijklmnopqrstuvwxyz0123456789')), 0, 32);")" >> .env.dev
+```
 
 ### Building the Docker Images
 

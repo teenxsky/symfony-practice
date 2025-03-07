@@ -1,1 +1,1 @@
-GRANT ALL PRIVILEGES ON DATABASE app TO app_admin;
+GRANT ALL PRIVILEGES ON DATABASE your_db_name TO postgres;
