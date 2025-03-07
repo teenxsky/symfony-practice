@@ -5,7 +5,7 @@
 **Requirements:** 
 - Docker installed on your machine.
 - Docker Compose installed on your machine.
-- **EDIT FILES:** `.env`, `.env.dev`, `.env.test`.
+- **CONFIGURE .env FILES:** `.env`, `.env.dev`, `.env.test`.
 
 ### Building the Docker Images
 
