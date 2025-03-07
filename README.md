@@ -5,7 +5,7 @@
 **Prerequisites:** 
 - Docker installed on your machine.
 - Docker Compose installed on your machine.
-- `.env`, `.env.dev`, `.env.test` file configured with necessary environment variables.
+- **EDIT FILES:** `.env`, `.env.dev`, `.env.test`.
 
 ### Building the Docker Images
 
