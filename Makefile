@@ -8,7 +8,7 @@ build-dev:
 
 # Starts the services in detached mode
 up-dev:
-	$(DOCKER_COMPOSE_DEV) up -d --watch
+	$(DOCKER_COMPOSE_DEV) up -d
 
 # Starts the services and logs are displayed.
 up-logs-dev:
