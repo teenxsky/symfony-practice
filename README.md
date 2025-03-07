@@ -2,7 +2,7 @@
 
 ## Usage Guide
 
-**Prerequisites:** 
+**Requirements:** 
 - Docker installed on your machine.
 - Docker Compose installed on your machine.
 - **EDIT FILES:** `.env`, `.env.dev`, `.env.test`.
