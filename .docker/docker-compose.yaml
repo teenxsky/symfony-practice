@@ -23,36 +23,37 @@ services:
       context: ./../
       dockerfile: ./.docker/dev/php/Dockerfile
     volumes:
-      - php-deps:/var/www/app/vendor/
-    develop:
-      watch:
-        - path: ./../
-          action: sync
-          target: /var/www/app
+      - php-vendor:/var/www/app/vendor/
+      - php-var:/var/www/app/var/
+      - ./../:/var/www/app
     depends_on:
       database:
         condition: service_healthy
-    env_file:
-      - ./../.env.dev
 
   database:
     container_name: postgres
     ports:
-      - 5432:5432
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
     build:
       context: ./../
       dockerfile: ./.docker/dev/postgresql/Dockerfile
     volumes:
       - pg-data:/var/lib/postgresql/data/
-      - ./dev/postgresql/dumbs:/docker-entrypoint-initdb.d
+      - ./dev/postgresql/dumps:/docker-entrypoint-initdb.d
+    environment:
+      - TZ=${TZ}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    command: ["postgres", "-c", "port=${POSTGRES_PORT}"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app_admin -d app"]
+      test:
+        ["CMD", "pg_isready", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 40s
-    env_file:
-      - ./../.env.dev
 
 volumes:
   pg-data:
