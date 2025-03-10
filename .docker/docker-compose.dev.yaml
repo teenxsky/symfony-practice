@@ -33,7 +33,7 @@ services:
       database:
         condition: service_healthy
     env_file:
-      - ./../.env.dev
+      - ./../.env.dev.local
 
   database:
     container_name: postgres
@@ -52,7 +52,7 @@ services:
       retries: 5
       start_period: 40s
     env_file:
-      - ./../.env.dev
+      - ./../.env.dev.local
 
 volumes:
   pg-data:

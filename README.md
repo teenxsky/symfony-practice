@@ -6,30 +6,30 @@
 
 - Docker installed on your machine.
 - Docker Compose installed on your machine.
-- **CONFIGURE .env FILES:** `.env`, `.env.dev`, `.env.test`:
+- **Configure .env local files:** `.env.local`, `.env.dev.local`, `.env.test.local`:
 
-1. Make `.env` files from examples :
+1. Make `.env.local` files from examples :
 
 ```bash
-cp .env.example .env
+cp .env .env.local
 ```
 
 ```bash
-cp .env.dev.example .env.dev
+cp .env.dev .env.dev.local
 ```
 
 ```bash
-cp .env.test.example .env.test
+cp .env.test .env.test.local
 ```
 
 2. Create your unique `APP_SECRET` (optional):
 
 ```bash
-sed -i "" "/^APP_SECRET=/d" .env && echo "APP_SECRET=$(php -r "print substr(base64_encode(str_shuffle('abcdefghijklmnopqrstuvwxyz0123456789')), 0, 32);")" >> .env
+sed -i "" "/^APP_SECRET=/d" .env.local && echo "APP_SECRET=$(php -r "print substr(base64_encode(str_shuffle('abcdefghijklmnopqrstuvwxyz0123456789')), 0, 32);")" >> .env.local
 ```
 
 ```bash
-sed -i "" "/^APP_SECRET=/d" .env.dev && echo "APP_SECRET=$(php -r "print substr(base64_encode(str_shuffle('abcdefghijklmnopqrstuvwxyz0123456789')), 0, 32);")" >> .env.dev
+sed -i "" "/^APP_SECRET=/d" .env.dev.local && echo "APP_SECRET=$(php -r "print substr(base64_encode(str_shuffle('abcdefghijklmnopqrstuvwxyz0123456789')), 0, 32);")" >> .env.dev.local
 ```
 
 ### Building the Docker Images
