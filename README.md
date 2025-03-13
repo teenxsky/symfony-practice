@@ -80,10 +80,10 @@ make migrate
 
 ### Database Backup
 
-To create a database backup (dumb.sql), run:
+To create a database backup (dump.sql), run:
 
 ```bash
-make make-dumb
+make make-dump
 ```
 
 ### Accessing the Backend Container Shell

@@ -1,4 +1,4 @@
--include ./.env.dev.local
+-include ./.env.local
 DOCKER_COMPOSE = docker-compose -f ./.docker/docker-compose.yaml --env-file .env.local
 
 # Build the Docker images for the development environment
@@ -11,7 +11,7 @@ up:
 
 # Starts the services and logs are displayed.
 up-logs:
-	$(DOCKER_COMPOSE) up --watch --no-deps --build
+	$(DOCKER_COMPOSE) up --no-deps --build
 
 # Stops the services
 down:

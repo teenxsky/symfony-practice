@@ -31,8 +31,7 @@ RUN docker-php-ext-install \
     pdo_pgsql \
     pgsql
 
-COPY ./.docker/dev/php/entrypoint.sh /usr/local/entrypoint.sh
-RUN chmod +x /usr/local/entrypoint.sh
-ENTRYPOINT ["sh", "/usr/local/entrypoint.sh"]
+RUN mkdir -p /var/www/app/var && \
+    chown -R www-data:www-data /var/www/app/var
 
 CMD [ "php-fpm", "--fpm-config", "/usr/local/etc/php-fpm.conf" ]
