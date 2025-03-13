@@ -1,4 +1,4 @@
-name: symfony-dev
+name: symfony-app
 
 services:
   nginx:
@@ -23,14 +23,14 @@ services:
       context: ./../
       dockerfile: ./.docker/dev/php/Dockerfile
     volumes:
-      - php-deps:/var/www/app/vendor/
-    environment:
-      - DATABASE=${DATABASE}
-    develop:
-      watch:
-        - path: ./../
-          action: sync
-          target: /var/www/app
+      - php-vendor:/var/www/app/vendor/
+      - php-var:/var/www/app/var/
+      - ./../:/var/www/app
+    # develop:
+    #   watch:
+    #     - path: ./../
+    #       action: sync+restart
+    #       target: /var/www/app
     depends_on:
       database:
         condition: service_healthy
@@ -59,4 +59,5 @@ services:
 
 volumes:
   pg-data:
-  php-deps:
+  php-var:
+  php-vendor:
