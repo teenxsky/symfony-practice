@@ -23,14 +23,9 @@ services:
       context: ./../
       dockerfile: ./.docker/dev/php/Dockerfile
     volumes:
-      - php-deps:/var/www/app/vendor/
-    environment:
-      - DATABASE=${DATABASE}
-    develop:
-      watch:
-        - path: ./../
-          action: sync
-          target: /var/www/app
+      - php-vendor:/var/www/app/vendor/
+      - php-var:/var/www/app/var/
+      - ./../:/var/www/app
     depends_on:
       database:
         condition: service_healthy
