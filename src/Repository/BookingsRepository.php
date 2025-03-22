@@ -5,21 +5,21 @@ use App\Entity\Booking;
 
 class BookingsRepository
 {
-    private string $filePath;
+    private string $file_path;
 
     private const HEADERS = [
         'id',
         'phone_number',
         'house_id',
-        'comment'
+        'comment',
     ];
 
-    public function __construct(string $filePath)
+    public function __construct(string $file_path)
     {
-        $this->filePath = $filePath;
+        $this->file_path = $file_path;
 
-        if (! file_exists($this->filePath)) {
-            $handle = fopen($this->filePath, 'w');
+        if (! file_exists($this->file_path)) {
+            $handle = fopen($this->file_path, 'w');
             fputcsv($handle, self::HEADERS);
             fclose($handle);
         }
@@ -28,14 +28,16 @@ class BookingsRepository
     public function findAllBookings(): array
     {
         $bookings = [];
-        if (($handle = fopen($this->filePath, 'r')) !== false) {
+        if (($handle = fopen($this->file_path, 'r')) !== false) {
             fgetcsv($handle, 1000, ',');
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
                 $booking = new Booking();
-                $booking->setId((int)$data[0]);
-                $booking->setPhoneNumber((string)$data[1]);
-                $booking->setHouseId((int)$data[2]);
-                $booking->setComment((string)$data[3]);
+
+                $booking
+                    ->setId((int) $data[0])
+                    ->setPhoneNumber((string) $data[1])
+                    ->setHouseId((int) $data[2])
+                    ->setComment((string) $data[3]);
 
                 $bookings[] = $booking;
             }
@@ -57,49 +59,29 @@ class BookingsRepository
 
     public function addBooking(Booking $booking): void
     {
-        $id = 1;
+        $id       = 1;
         $bookings = $this->findAllBookings();
-        if (!empty($bookings)) {
-            $lastBooking = end($bookings);
-            $id = (int)$lastBooking->getId() + 1;
+        if (! empty($bookings)) {
+            $last_booking = end($bookings);
+            $id           = (int) $last_booking->getId() + 1;
         }
 
         $booking->setId($id);
 
-        $bookingData = [
-            $booking->getId(),
-            $booking->getPhoneNumber(),
-            $booking->getHouseId(),
-            $booking->getComment(),
-        ];
-
-        $handle = fopen($this->filePath, 'a');
-        fputcsv($handle, $bookingData);
-        fclose($handle);
+        $this->saveBookings([$booking], 'a');
     }
 
     public function updateBooking(Booking $booking): void
     {
         $bookings = $this->findAllBookings();
-        foreach ($bookings as &$existingBooking) {
-            if ($existingBooking->getId() == $booking->getId()) {
-                $existingBooking = $booking;
+        foreach ($bookings as &$existing_booking) {
+            if ($existing_booking->getId() == $booking->getId()) {
+                $existing_booking = $booking;
                 break;
             }
         }
-        
-        $handle = fopen($this->filePath, 'w');
-        fputcsv($handle, self::HEADERS);
-        foreach ($bookings as $booking) {
-            $bookingData = [
-                $booking->getId(),
-                $booking->getPhoneNumber(),
-                $booking->getHouseId(),
-                $booking->getComment(),
-            ];
-            fputcsv($handle, $bookingData);
-        }
-        fclose($handle);
+
+        $this->saveBookings($bookings, 'w');
     }
 
     public function deleteBooking(int $id): void
@@ -112,16 +94,29 @@ class BookingsRepository
             }
         }
 
-        $handle = fopen($this->filePath, 'w');
-        fputcsv($handle, self::HEADERS);
+        $this->saveBookings($bookings, 'w');
+    }
+
+    private function saveBookings(array $bookings, string $mode): void
+    {
+        if (! in_array($mode, ['w', 'a'])) {
+            throw new \InvalidArgumentException('Invalid mode. Use "w" or "a".');
+        }
+
+        $handle = fopen($this->file_path, $mode);
+
+        if ($mode === 'w') {
+            fputcsv($handle, self::HEADERS);
+        }
+
         foreach ($bookings as $booking) {
-            $bookingData = [
+            $house_data = [
                 $booking->getId(),
                 $booking->getPhoneNumber(),
                 $booking->getHouseId(),
                 $booking->getComment(),
             ];
-            fputcsv($handle, $bookingData);
+            fputcsv($handle, $house_data);
         }
         fclose($handle);
     }

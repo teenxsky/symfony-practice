@@ -25,8 +25,8 @@ services:
 
   App\Repository\HousesRepository:
     arguments:
-      $filePath: "%kernel.project_dir%/src/Storage/houses.csv"
+      $file_path: "%kernel.project_dir%/src/Storage/houses.csv"
 
   App\Repository\BookingsRepository:
     arguments:
-      $filePath: "%kernel.project_dir%/src/Storage/bookings.csv"
+      $file_path: "%kernel.project_dir%/src/Storage/bookings.csv"

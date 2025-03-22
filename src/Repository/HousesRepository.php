@@ -5,7 +5,7 @@ use App\Entity\House;
 
 class HousesRepository
 {
-    private string $filePath;
+    private string $file_path;
 
     private const HEADERS = [
         'id',
@@ -19,12 +19,12 @@ class HousesRepository
         'has_sea_view',
     ];
 
-    public function __construct(string $filePath)
+    public function __construct(string $file_path)
     {
-        $this->filePath = $filePath;
+        $this->file_path = $file_path;
 
-        if (! file_exists($this->filePath)) {
-            $handle = fopen($this->filePath, 'w');
+        if (! file_exists($this->file_path)) {
+            $handle = fopen($this->file_path, 'w');
             fputcsv($handle, self::HEADERS);
             fclose($handle);
         }
@@ -33,19 +33,21 @@ class HousesRepository
     public function findAllHouses(): array
     {
         $houses = [];
-        if (($handle = fopen($this->filePath, 'r')) !== false) {
+        if (($handle = fopen($this->file_path, 'r')) !== false) {
             fgetcsv($handle, 1000, ',');
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
                 $house = new House();
-                $house->setId((int) $data[0]);
-                $house->setIsAvailable(filter_var($data[1], FILTER_VALIDATE_BOOLEAN));
-                $house->setBedroomsCount((int) $data[2]);
-                $house->setPricePerNight((int) $data[3]);
-                $house->setHasAirConditioning(filter_var($data[4], FILTER_VALIDATE_BOOLEAN));
-                $house->setHasWifi(filter_var($data[5], FILTER_VALIDATE_BOOLEAN));
-                $house->setHasKitchen(filter_var($data[6], FILTER_VALIDATE_BOOLEAN));
-                $house->setHasParking(filter_var($data[7], FILTER_VALIDATE_BOOLEAN));
-                $house->setHasSeaView(filter_var($data[8], FILTER_VALIDATE_BOOLEAN));
+
+                $house
+                    ->setId((int) $data[0])
+                    ->setIsAvailable(filter_var($data[1], FILTER_VALIDATE_BOOLEAN))
+                    ->setBedroomsCount((int) $data[2])
+                    ->setPricePerNight((int) $data[3])
+                    ->setHasAirConditioning(filter_var($data[4], FILTER_VALIDATE_BOOLEAN))
+                    ->setHasWifi(filter_var($data[5], FILTER_VALIDATE_BOOLEAN))
+                    ->setHasKitchen(filter_var($data[6], FILTER_VALIDATE_BOOLEAN))
+                    ->setHasParking(filter_var($data[7], FILTER_VALIDATE_BOOLEAN))
+                    ->setHasSeaView(filter_var($data[8], FILTER_VALIDATE_BOOLEAN));
 
                 $houses[] = $house;
             }
@@ -70,40 +72,26 @@ class HousesRepository
         $id     = 1;
         $houses = $this->findAllHouses();
         if (! empty($houses)) {
-            $lastHouse = end($houses);
-            $id        = (int) $lastHouse->getId() + 1;
+            $last_house = end($houses);
+            $id         = (int) $last_house->getId() + 1;
         }
 
         $house->setId($id);
 
-        $houseData = [
-            $house->getId(),
-            $house->isAvailable(),
-            $house->getBedroomsCount(),
-            $house->getPricePerNight(),
-            $house->hasAirConditioning(),
-            $house->hasWifi(),
-            $house->hasKitchen(),
-            $house->hasParking(),
-            $house->hasSeaView(),
-        ];
-
-        $handle = fopen($this->filePath, 'a');
-        fputcsv($handle, $houseData);
-        fclose($handle);
+        $this->saveHouses([$house], 'a');
     }
 
     public function updateHouse(House $house): void
     {
         $houses = $this->findAllHouses();
-        foreach ($houses as &$existingHouse) {
-            if ($existingHouse->getId() == $house->getId()) {
-                $existingHouse = $house;
+        foreach ($houses as &$existing_house) {
+            if ($existing_house->getId() == $house->getId()) {
+                $existing_house = $house;
                 break;
             }
         }
 
-        $this->writeAllHouses($houses);
+        $this->saveHouses($houses, 'w');
     }
 
     public function deleteHouse(int $id): void
@@ -116,15 +104,23 @@ class HousesRepository
             }
         }
 
-        $this->writeAllHouses($houses);
+        $this->saveHouses($houses, 'w');
     }
 
-    private function writeAllHouses(array $houses): void
+    private function saveHouses(array $houses, string $mode): void
     {
-        $handle = fopen($this->filePath, 'w');
-        fputcsv($handle, self::HEADERS);
+        if (! in_array($mode, ['w', 'a'])) {
+            throw new \InvalidArgumentException('Invalid mode. Use "w" or "a".');
+        }
+
+        $handle = fopen($this->file_path, $mode);
+
+        if ($mode === 'w') {
+            fputcsv($handle, self::HEADERS);
+        }
+
         foreach ($houses as $house) {
-            $houseData = [
+            $house_data = [
                 $house->getId(),
                 $house->isAvailable(),
                 $house->getBedroomsCount(),
@@ -135,7 +131,7 @@ class HousesRepository
                 $house->hasParking(),
                 $house->hasSeaView(),
             ];
-            fputcsv($handle, $houseData);
+            fputcsv($handle, $house_data);
         }
         fclose($handle);
     }

@@ -7,6 +7,7 @@ use App\Repository\HousesRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\Exception\NotEncodableValueException;
 use Symfony\Component\Serializer\Exception\UnexpectedValueException;
@@ -16,204 +17,291 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 #[Route('/api/v1/bookings', name: 'bookings_api')]
 class BookingsController extends AbstractController
 {
-    private $bookingsRepository;
-    private $housesRepository;
-    private $validator;
+    private $bookings_repository;
+    private $houses_repository;
     private $serializer;
+    private $validator;
 
-    public function __construct(BookingsRepository $bookingsRepository, HousesRepository $housesRepository, ValidatorInterface $validator, SerializerInterface $serializer)
-    {
-        $this->bookingsRepository = $bookingsRepository;
-        $this->housesRepository   = $housesRepository;
-        $this->validator          = $validator;
-        $this->serializer         = $serializer;
+    public function __construct(
+        BookingsRepository $bookings_repository,
+        HousesRepository $houses_repository,
+        SerializerInterface $serializer,
+        ValidatorInterface $validator
+    ) {
+        $this->bookings_repository = $bookings_repository;
+        $this->houses_repository   = $houses_repository;
+        $this->serializer          = $serializer;
+        $this->validator           = $validator;
     }
 
     #[Route('/', name: 'bookings_list', methods: ['GET'])]
     public function listBookings(): JsonResponse
     {
-        return $this->json($this->bookingsRepository->findAllbookings());
+        return $this->json(
+            $this->bookings_repository->findAllBookings(),
+            Response::HTTP_OK
+        );
     }
 
     #[Route('/', name: 'bookings_add', methods: ['POST'])]
     public function addBooking(Request $request): JsonResponse
     {
-        if ('json' !== $request->getContentTypeFormat()) {
-            return $this->json(['status' => 'Unsupported content format'], 400);
+        [
+            'booking' => $booking,
+            'error'   => $err,
+        ] = $this->bookingSerialize($request);
+
+        if ($err) {
+            return $this->json($err, Response::HTTP_BAD_REQUEST);
         }
 
-        try {
-            $booking = $this->serializer->deserialize($request->getContent(), Booking::class, 'json');
-        } catch (NotEncodableValueException | UnexpectedValueException $e) {
-            return $this->json(['status' => 'Invalid JSON', 'error' => $e->getMessage()], 400);
+        $err = $this->validateBooking($booking);
+        if (! empty($err)) {
+            return $this->json(
+                [
+                    'status' => 'Validation failed',
+                    'errors' => $err,
+                ],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
-        $errors = $this->validator->validate($booking);
-
-        if (count($errors) > 0) {
-            $errorsArray = [];
-            foreach ($errors as $error) {
-                $errorsArray[] = [
-                    'field'   => $error->getPropertyPath(),
-                    'message' => $error->getMessage(),
-                ];
-            }
-            return $this->json(['status' => 'Validation failed', 'errors' => $errorsArray], 400);
+        $booked_house = $this->houses_repository->findHouseById($booking->getHouseId());
+        if (! $booked_house) {
+            return $this->json(
+                ['status' => 'House not found'],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+        if (! $booked_house->isAvailable()) {
+            return $this->json(
+                ['status' => 'House is not available'],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
-        $bookedHouse = $this->housesRepository->findHouseById($booking->getHouseId());
-        if (! $bookedHouse) {
-            return $this->json(['status' => 'House not found'], 404);
-        }
-        if (! $bookedHouse->isAvailable()) {
-            return $this->json(['status' => 'House is not available'], 400);
-        }
+        $booked_house->setIsAvailable(false);
+        $this->houses_repository->updateHouse($booked_house);
 
-        $bookedHouse->setIsAvailable(false);
-        $this->housesRepository->updateHouse($bookedHouse);
-        $this->bookingsRepository->addBooking($booking);
-
-        return $this->json(['status' => 'Booking created!'], 201);
+        $this->bookings_repository->addBooking($booking);
+        return $this->json(
+            ['status' => 'Booking created!'],
+            Response::HTTP_CREATED
+        );
     }
 
     #[Route('/{id}', name: 'bookings_get_by_id', methods: ['GET'])]
     public function getBooking(int $id): JsonResponse
     {
-        $booking = $this->bookingsRepository->findBookingById($id);
+        $booking = $this->bookings_repository->findBookingById($id);
         if (! $booking) {
-            return $this->json(['status' => 'Booking not found'], 404);
+            return $this->json(
+                ['status' => 'Booking not found'],
+                Response::HTTP_NOT_FOUND
+            );
         }
 
-        return $this->json($booking);
+        return $this->json($booking, Response::HTTP_OK);
     }
 
     #[Route('/{id}', name: 'bookings_replace_by_id', methods: ['PUT'])]
     public function replaceBooking(Request $request, int $id): JsonResponse
     {
-        if ('json' !== $request->getContentTypeFormat()) {
-            return $this->json(['status' => 'Unsupported content format'], 400);
+        [
+            'booking' => $replacing_booking,
+            'error'   => $err,
+        ] = $this->bookingSerialize($request);
+
+        if ($err) {
+            return $this->json($err, Response::HTTP_BAD_REQUEST);
         }
 
-        $existingBooking = $this->bookingsRepository->findBookingById($id);
-        if (! $existingBooking) {
-            return $this->json(['status' => 'Booking not found'], 404);
+        $existing_booking = $this->bookings_repository->findBookingById($id);
+        if (! $existing_booking) {
+            return $this->json(
+                ['status' => 'Booking not found'],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+        $replacing_booking->setId($id);
+
+        $err = $this->validateBooking($replacing_booking);
+        if (! empty($err)) {
+            return $this->json(
+                [
+                    'status' => 'Validation failed',
+                    'errors' => $err,
+                ],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
-        try {
-            $updatedBooking = $this->serializer->deserialize($request->getContent(), Booking::class, 'json');
-            $updatedBooking->setId($id);
-        } catch (NotEncodableValueException | UnexpectedValueException $e) {
-            return $this->json(['status' => 'Invalid JSON', 'error' => $e->getMessage()], 400);
-        }
+        if ($existing_booking->getHouseId() !== $replacing_booking->getHouseId()) {
+            $new_booking_house = $this->houses_repository->findHouseById($replacing_booking->getHouseId());
+            $old_booking_house = $this->houses_repository->findHouseById($existing_booking->getHouseId());
 
-        $errors = $this->validator->validate($updatedBooking);
-        if (count($errors) > 0) {
-            $errorsArray = [];
-            foreach ($errors as $error) {
-                $errorsArray[] = [
-                    'field'   => $error->getPropertyPath(),
-                    'message' => $error->getMessage(),
-                ];
+            if (! $new_booking_house) {
+                return $this->json(
+                    ['status' => 'House not found'],
+                    Response::HTTP_NOT_FOUND
+                );
             }
-            return $this->json(['status' => 'Validation failed', 'errors' => $errorsArray], 400);
-        }
-
-        if ($existingBooking->getHouseId() !== $updatedBooking->getHouseId()) {
-            $newBookingHouse = $this->housesRepository->findHouseById($updatedBooking->getHouseId());
-            $oldBookingHouse = $this->housesRepository->findHouseById($existingBooking->getHouseId());
-
-            if (! $newBookingHouse) {
-                return $this->json(['status' => 'House not found'], 404);
-            }
-            if (! $newBookingHouse->isAvailable()) {
-                return $this->json(['status' => 'House is not available'], 400);
+            if (! $new_booking_house->isAvailable()) {
+                return $this->json(
+                    ['status' => 'House is not available'],
+                    Response::HTTP_BAD_REQUEST
+                );
             }
 
-            $oldBookingHouse->setIsAvailable(true);
-            $this->housesRepository->updateHouse($oldBookingHouse);
-            $newBookingHouse->setIsAvailable(false);
-            $this->housesRepository->updateHouse($newBookingHouse);
+            $old_booking_house->setIsAvailable(true);
+            $this->houses_repository->updateHouse($old_booking_house);
+            $new_booking_house->setIsAvailable(false);
+            $this->houses_repository->updateHouse($new_booking_house);
         }
 
-        $this->bookingsRepository->updateBooking($existingBooking);
-
-        return $this->json(['status' => 'Booking replaced!'], 200);
+        $this->bookings_repository->updateBooking($replacing_booking);
+        return $this->json(
+            ['status' => 'Booking replaced!'],
+            Response::HTTP_OK
+        );
     }
 
     #[Route('/{id}', name: 'bookings_update_by_id', methods: ['PATCH'])]
     public function updateBooking(Request $request, int $id): JsonResponse
     {
-        if ('json' !== $request->getContentTypeFormat()) {
-            return $this->json(['status' => 'Unsupported content format'], 400);
+        [
+            'booking' => $updated_booking,
+            'error'   => $err,
+        ] = $this->bookingSerialize($request);
+
+        if ($err) {
+            return $this->json($err, Response::HTTP_BAD_REQUEST);
         }
 
-        $existingBooking = $this->bookingsRepository->findBookingById($id);
-        if (! $existingBooking) {
-            return $this->json(['status' => 'Booking not found'], 404);
+        $existing_booking = $this->bookings_repository->findBookingById($id);
+        if (! $existing_booking) {
+            return $this->json(
+                ['status' => 'Booking not found'],
+                Response::HTTP_NOT_FOUND
+            );
         }
 
-        try {
-            $updatedBooking = $this->serializer->deserialize($request->getContent(), Booking::class, 'json');
-        } catch (NotEncodableValueException | UnexpectedValueException $e) {
-            return $this->json(['status' => 'Invalid JSON', 'error' => $e->getMessage()], 400);
-        }
+        $existing_booking
+            ->setPhoneNumber($updated_booking->getPhoneNumber() ?? $existing_booking->getPhoneNumber())
+            ->setComment($updated_booking->getComment() ?? $existing_booking->getComment());
 
-        if ($updatedBooking->getPhoneNumber() !== null) {
-            $existingBooking->setPhoneNumber($updatedBooking->getPhoneNumber());
-        }
-        if ($updatedBooking->getComment() !== null) {
-            $existingBooking->setComment($updatedBooking->getComment());
-        }
-        if ($updatedBooking->getHouseId() !== null) {
-            if ($existingBooking->getHouseId() !== $updatedBooking->getHouseId()) {
-                $newBookingHouse = $this->housesRepository->findHouseById($updatedBooking->getHouseId());
-                $oldBookingHouse = $this->housesRepository->findHouseById($existingBooking->getHouseId());
+        if ($updated_booking->getHouseId() !== null) {
+            if ($existing_booking->getHouseId() !== $updated_booking->getHouseId()) {
+                $new_booking_house = $this->houses_repository->findHouseById($updated_booking->getHouseId());
+                $old_booking_house = $this->houses_repository->findHouseById($existing_booking->getHouseId());
 
-                if (! $newBookingHouse) {
-                    return $this->json(['status' => 'House not found'], 404);
+                if (! $new_booking_house) {
+                    return $this->json(
+                        ['status' => 'House not found'],
+                        Response::HTTP_NOT_FOUND
+                    );
                 }
-                if (! $newBookingHouse->isAvailable()) {
-                    return $this->json(['status' => 'House is not available'], 400);
+                if (! $new_booking_house->isAvailable()) {
+                    return $this->json(
+                        ['status' => 'House is not available'],
+                        Response::HTTP_BAD_REQUEST
+                    );
                 }
 
-                $oldBookingHouse->setIsAvailable(true);
-                $this->housesRepository->updateHouse($oldBookingHouse);
-                $newBookingHouse->setIsAvailable(false);
-                $this->housesRepository->updateHouse($newBookingHouse);
+                $old_booking_house->setIsAvailable(true);
+                $this->houses_repository->updateHouse($old_booking_house);
+                $new_booking_house->setIsAvailable(false);
+                $this->houses_repository->updateHouse($new_booking_house);
             }
-            $existingBooking->setHouseId($updatedBooking->getHouseId());
+            $existing_booking->setHouseId($updated_booking->getHouseId());
         }
 
-        $errors = $this->validator->validate($existingBooking);
-        if (count($errors) > 0) {
-            $errorsArray = [];
-            foreach ($errors as $error) {
-                $errorsArray[] = [
-                    'field'   => $error->getPropertyPath(),
-                    'message' => $error->getMessage(),
-                ];
-            }
-            return $this->json(['status' => 'Validation failed', 'errors' => $errorsArray], 400);
+        $err = $this->validateBooking($existing_booking);
+        if (! empty($err)) {
+            return $this->json(
+                [
+                    'status' => 'Validation failed',
+                    'errors' => $err,
+                ],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
-        $this->bookingsRepository->updateBooking($existingBooking);
-
-        return $this->json(['status' => 'Booking updated!'], 200);
+        $this->bookings_repository->updateBooking($existing_booking);
+        return $this->json(
+            ['status' => 'Booking updated!'],
+            Response::HTTP_OK
+        );
     }
 
     #[Route('/{id}', name: 'bookings_delete_by_id', methods: ['DELETE'])]
     public function deleteBooking(Request $request, int $id): JsonResponse
     {
-        if (! $booking = $this->bookingsRepository->findBookingById($id)) {
-            return $this->json(['status' => 'Booking not found'], 404);
+        if (! $booking = $this->bookings_repository->findBookingById($id)) {
+            return $this->json(
+                ['status' => 'Booking not found'],
+                Response::HTTP_NOT_FOUND
+            );
         }
-        
-        $bookedHouse = $this->housesRepository->findHouseById($booking->getHouseId());
-        $bookedHouse->setIsAvailable(true);
-        $this->housesRepository->updateHouse($bookedHouse);
 
-        $this->bookingsRepository->deleteBooking($id);
+        $booked_house = $this->houses_repository->findHouseById($booking->getHouseId());
+        $booked_house->setIsAvailable(true);
+        $this->houses_repository->updateHouse($booked_house);
 
-        return $this->json(['status' => 'Booking deleted!'], 200);
+        $this->bookings_repository->deleteBooking($id);
+        return $this->json(
+            ['status' => 'Booking deleted!'],
+            Response::HTTP_OK
+        );
+    }
+
+    private function bookingSerialize(Request $request): array
+    {
+        if ($request->getContentTypeFormat() !== 'json') {
+            return [
+                'booking' => null,
+                'error'   => [
+                    'status' => 'Unsupported content format',
+                ],
+            ];
+        }
+        try {
+            $booking = $this->serializer->deserialize(
+                $request->getContent(),
+                Booking::class,
+                'json'
+            );
+            return [
+                'booking' => $booking,
+                'error'   => null,
+            ];
+        } catch (NotEncodableValueException | UnexpectedValueException $err) {
+            return [
+                'booking' => null,
+                'error'   => [
+                    'status' => 'Invalid JSON',
+                    'error'  => $err->getMessage(),
+                ],
+            ];
+        }
+    }
+
+    private function validateBooking(Booking $booking): array
+    {
+        $errs = $this->validator->validate($booking);
+        if (count($errs) > 0) {
+            $errs_array = [];
+            foreach ($errs as $err) {
+                $errs_array[] = [
+                    'field'   => $err->getPropertyPath(),
+                    'message' => $err->getMessage(),
+                ];
+            }
+            return [
+                'status' => 'Validation failed',
+                'errors' => $errs_array,
+            ];
+        }
+        return [];
     }
 }
