@@ -15,44 +15,44 @@ class House
 
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
-    private ?bool $isAvailable = true;
+    private ?bool $is_available = true;
 
     // #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('integer')]
     #[Assert\Range(min: 1, max: 20)]
-    private ?int $bedroomsCount = null;
+    private ?int $bedrooms_count = null;
 
     // #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('integer')]
     #[Assert\Range(min: 100, max: 100000)]
-    private ?int $pricePerNight = null;
+    private ?int $price_per_night = null;
 
     // #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
-    private ?bool $hasAirConditioning = null;
+    private ?bool $has_air_conditioning = null;
 
     // #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
-    private ?bool $hasWifi = null;
+    private ?bool $has_wifi = null;
 
     // #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
-    private ?bool $hasKitchen = null;
+    private ?bool $has_kitchen = null;
 
     // #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
-    private ?bool $hasParking = null;
+    private ?bool $has_parking = null;
 
     // #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
-    private ?bool $hasSeaView = null;
+    private ?bool $has_sea_view = null;
 
     public function getId(): ?int
     {
@@ -69,36 +69,36 @@ class House
     #[Ignore]
     public function isAvailable(): ?bool
     {
-        return $this->isAvailable;
+        return $this->is_available;
     }
 
-    public function setIsAvailable(bool $isAvailable): static
+    public function setIsAvailable(bool $is_available): static
     {
-        $this->isAvailable = $isAvailable;
+        $this->is_available = $is_available;
 
         return $this;
     }
 
     public function getBedroomsCount(): ?int
     {
-        return $this->bedroomsCount;
+        return $this->bedrooms_count;
     }
 
-    public function setBedroomsCount(int $bedroomsCount): static
+    public function setBedroomsCount(int $bedrooms_count): static
     {
-        $this->bedroomsCount = $bedroomsCount;
+        $this->bedrooms_count = $bedrooms_count;
 
         return $this;
     }
 
     public function getPricePerNight(): ?int
     {
-        return $this->pricePerNight;
+        return $this->price_per_night;
     }
 
-    public function setPricePerNight(int $pricePerNight): static
+    public function setPricePerNight(int $price_per_night): static
     {
-        $this->pricePerNight = $pricePerNight;
+        $this->price_per_night = $price_per_night;
 
         return $this;
     }
@@ -106,12 +106,12 @@ class House
     #[Ignore]
     public function hasAirConditioning(): ?bool
     {
-        return $this->hasAirConditioning;
+        return $this->has_air_conditioning;
     }
 
-    public function setHasAirConditioning(?bool $hasAirConditioning): static
+    public function setHasAirConditioning(?bool $has_air_conditioning): static
     {
-        $this->hasAirConditioning = $hasAirConditioning;
+        $this->has_air_conditioning = $has_air_conditioning;
 
         return $this;
     }
@@ -119,12 +119,12 @@ class House
     #[Ignore]
     public function hasWifi(): ?bool
     {
-        return $this->hasWifi;
+        return $this->has_wifi;
     }
 
-    public function setHasWifi(?bool $hasWifi): static
+    public function setHasWifi(?bool $has_wifi): static
     {
-        $this->hasWifi = $hasWifi;
+        $this->has_wifi = $has_wifi;
 
         return $this;
     }
@@ -132,12 +132,12 @@ class House
     #[Ignore]
     public function hasKitchen(): ?bool
     {
-        return $this->hasKitchen;
+        return $this->has_kitchen;
     }
 
-    public function setHasKitchen(?bool $hasKitchen): static
+    public function setHasKitchen(?bool $has_kitchen): static
     {
-        $this->hasKitchen = $hasKitchen;
+        $this->has_kitchen = $has_kitchen;
 
         return $this;
     }
@@ -145,12 +145,12 @@ class House
     #[Ignore]
     public function hasParking(): ?bool
     {
-        return $this->hasParking;
+        return $this->has_parking;
     }
 
-    public function setHasParking(?bool $hasParking): static
+    public function setHasParking(?bool $has_parking): static
     {
-        $this->hasParking = $hasParking;
+        $this->has_parking = $has_parking;
 
         return $this;
     }
@@ -158,12 +158,12 @@ class House
     #[Ignore]
     public function hasSeaView(): ?bool
     {
-        return $this->hasSeaView;
+        return $this->has_sea_view;
     }
 
-    public function setHasSeaView(?bool $hasSeaView): static
+    public function setHasSeaView(?bool $has_sea_view): static
     {
-        $this->hasSeaView = $hasSeaView;
+        $this->has_sea_view = $has_sea_view;
 
         return $this;
     }
