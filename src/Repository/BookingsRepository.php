@@ -31,9 +31,7 @@ class BookingsRepository
         if (($handle = fopen($this->file_path, 'r')) !== false) {
             fgetcsv($handle, 1000, ',');
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                $booking = new Booking();
-
-                $booking
+                $booking = (new Booking())
                     ->setId((int) $data[0])
                     ->setPhoneNumber((string) $data[1])
                     ->setHouseId((int) $data[2])

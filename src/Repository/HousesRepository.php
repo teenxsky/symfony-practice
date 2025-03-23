@@ -36,9 +36,7 @@ class HousesRepository
         if (($handle = fopen($this->file_path, 'r')) !== false) {
             fgetcsv($handle, 1000, ',');
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                $house = new House();
-
-                $house
+                $house = (new House())
                     ->setId((int) $data[0])
                     ->setIsAvailable(filter_var($data[1], FILTER_VALIDATE_BOOLEAN))
                     ->setBedroomsCount((int) $data[2])
