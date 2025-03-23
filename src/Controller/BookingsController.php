@@ -37,7 +37,7 @@ class BookingsController extends AbstractController
     #[Route('/', name: 'bookings_list', methods: ['GET'])]
     public function listBookings(): JsonResponse
     {
-        return $this->json(
+        return new JsonResponse(
             $this->bookings_repository->findAllBookings(),
             Response::HTTP_OK
         );
@@ -49,18 +49,18 @@ class BookingsController extends AbstractController
         [
             'booking' => $booking,
             'error'   => $err,
-        ] = $this->bookingSerialize($request);
+        ] = $this->bookingDeserialize($request);
 
         if ($err) {
-            return $this->json($err, Response::HTTP_BAD_REQUEST);
+            return new JsonResponse($err, Response::HTTP_BAD_REQUEST);
         }
 
-        $err = $this->validateBooking($booking);
-        if (! empty($err)) {
-            return $this->json(
+        $errs = $this->validateBooking($booking);
+        if (! empty($errs)) {
+            return new JsonResponse(
                 [
                     'status' => 'Validation failed',
-                    'errors' => $err,
+                    'errors' => $errs,
                 ],
                 Response::HTTP_BAD_REQUEST
             );
@@ -68,13 +68,13 @@ class BookingsController extends AbstractController
 
         $booked_house = $this->houses_repository->findHouseById($booking->getHouseId());
         if (! $booked_house) {
-            return $this->json(
+            return new JsonResponse(
                 ['status' => 'House not found'],
                 Response::HTTP_NOT_FOUND
             );
         }
         if (! $booked_house->isAvailable()) {
-            return $this->json(
+            return new JsonResponse(
                 ['status' => 'House is not available'],
                 Response::HTTP_BAD_REQUEST
             );
@@ -84,7 +84,7 @@ class BookingsController extends AbstractController
         $this->houses_repository->updateHouse($booked_house);
 
         $this->bookings_repository->addBooking($booking);
-        return $this->json(
+        return new JsonResponse(
             ['status' => 'Booking created!'],
             Response::HTTP_CREATED
         );
@@ -95,13 +95,13 @@ class BookingsController extends AbstractController
     {
         $booking = $this->bookings_repository->findBookingById($id);
         if (! $booking) {
-            return $this->json(
+            return new JsonResponse(
                 ['status' => 'Booking not found'],
                 Response::HTTP_NOT_FOUND
             );
         }
 
-        return $this->json($booking, Response::HTTP_OK);
+        return new JsonResponse($booking, Response::HTTP_OK);
     }
 
     #[Route('/{id}', name: 'bookings_replace_by_id', methods: ['PUT'])]
@@ -110,27 +110,27 @@ class BookingsController extends AbstractController
         [
             'booking' => $replacing_booking,
             'error'   => $err,
-        ] = $this->bookingSerialize($request);
+        ] = $this->bookingDeserialize($request);
 
         if ($err) {
-            return $this->json($err, Response::HTTP_BAD_REQUEST);
+            return new JsonResponse($err, Response::HTTP_BAD_REQUEST);
         }
 
         $existing_booking = $this->bookings_repository->findBookingById($id);
         if (! $existing_booking) {
-            return $this->json(
+            return new JsonResponse(
                 ['status' => 'Booking not found'],
                 Response::HTTP_NOT_FOUND
             );
         }
         $replacing_booking->setId($id);
 
-        $err = $this->validateBooking($replacing_booking);
-        if (! empty($err)) {
-            return $this->json(
+        $errs = $this->validateBooking($replacing_booking);
+        if (! empty($errs)) {
+            return new JsonResponse(
                 [
                     'status' => 'Validation failed',
-                    'errors' => $err,
+                    'errors' => $errs,
                 ],
                 Response::HTTP_BAD_REQUEST
             );
@@ -141,13 +141,13 @@ class BookingsController extends AbstractController
             $old_booking_house = $this->houses_repository->findHouseById($existing_booking->getHouseId());
 
             if (! $new_booking_house) {
-                return $this->json(
+                return new JsonResponse(
                     ['status' => 'House not found'],
                     Response::HTTP_NOT_FOUND
                 );
             }
             if (! $new_booking_house->isAvailable()) {
-                return $this->json(
+                return new JsonResponse(
                     ['status' => 'House is not available'],
                     Response::HTTP_BAD_REQUEST
                 );
@@ -160,7 +160,7 @@ class BookingsController extends AbstractController
         }
 
         $this->bookings_repository->updateBooking($replacing_booking);
-        return $this->json(
+        return new JsonResponse(
             ['status' => 'Booking replaced!'],
             Response::HTTP_OK
         );
@@ -172,15 +172,15 @@ class BookingsController extends AbstractController
         [
             'booking' => $updated_booking,
             'error'   => $err,
-        ] = $this->bookingSerialize($request);
+        ] = $this->bookingDeserialize($request);
 
         if ($err) {
-            return $this->json($err, Response::HTTP_BAD_REQUEST);
+            return new JsonResponse($err, Response::HTTP_BAD_REQUEST);
         }
 
         $existing_booking = $this->bookings_repository->findBookingById($id);
         if (! $existing_booking) {
-            return $this->json(
+            return new JsonResponse(
                 ['status' => 'Booking not found'],
                 Response::HTTP_NOT_FOUND
             );
@@ -190,19 +190,19 @@ class BookingsController extends AbstractController
             ->setPhoneNumber($updated_booking->getPhoneNumber() ?? $existing_booking->getPhoneNumber())
             ->setComment($updated_booking->getComment() ?? $existing_booking->getComment());
 
-        if ($updated_booking->getHouseId() !== null) {
+        if ($updated_booking->getHouseId()) {
             if ($existing_booking->getHouseId() !== $updated_booking->getHouseId()) {
                 $new_booking_house = $this->houses_repository->findHouseById($updated_booking->getHouseId());
                 $old_booking_house = $this->houses_repository->findHouseById($existing_booking->getHouseId());
 
                 if (! $new_booking_house) {
-                    return $this->json(
+                    return new JsonResponse(
                         ['status' => 'House not found'],
                         Response::HTTP_NOT_FOUND
                     );
                 }
                 if (! $new_booking_house->isAvailable()) {
-                    return $this->json(
+                    return new JsonResponse(
                         ['status' => 'House is not available'],
                         Response::HTTP_BAD_REQUEST
                     );
@@ -216,19 +216,19 @@ class BookingsController extends AbstractController
             $existing_booking->setHouseId($updated_booking->getHouseId());
         }
 
-        $err = $this->validateBooking($existing_booking);
-        if (! empty($err)) {
-            return $this->json(
+        $errs = $this->validateBooking($existing_booking);
+        if (! empty($errs)) {
+            return new JsonResponse(
                 [
                     'status' => 'Validation failed',
-                    'errors' => $err,
+                    'errors' => $errs,
                 ],
                 Response::HTTP_BAD_REQUEST
             );
         }
 
         $this->bookings_repository->updateBooking($existing_booking);
-        return $this->json(
+        return new JsonResponse(
             ['status' => 'Booking updated!'],
             Response::HTTP_OK
         );
@@ -238,7 +238,7 @@ class BookingsController extends AbstractController
     public function deleteBooking(Request $request, int $id): JsonResponse
     {
         if (! $booking = $this->bookings_repository->findBookingById($id)) {
-            return $this->json(
+            return new JsonResponse(
                 ['status' => 'Booking not found'],
                 Response::HTTP_NOT_FOUND
             );
@@ -249,13 +249,13 @@ class BookingsController extends AbstractController
         $this->houses_repository->updateHouse($booked_house);
 
         $this->bookings_repository->deleteBooking($id);
-        return $this->json(
+        return new JsonResponse(
             ['status' => 'Booking deleted!'],
             Response::HTTP_OK
         );
     }
 
-    private function bookingSerialize(Request $request): array
+    private function bookingDeserialize(Request $request): array
     {
         if ($request->getContentTypeFormat() !== 'json') {
             return [
@@ -297,10 +297,7 @@ class BookingsController extends AbstractController
                     'message' => $err->getMessage(),
                 ];
             }
-            return [
-                'status' => 'Validation failed',
-                'errors' => $errs_array,
-            ];
+            return $errs_array;
         }
         return [];
     }
