@@ -33,7 +33,7 @@ class HousesController extends AbstractController
     #[Route('/', name: 'houses_list', methods: ['GET'])]
     public function listHouses(): JsonResponse
     {
-        return $this->json($this->houses_repository->findAllHouses());
+        return new JsonResponse($this->houses_repository->findAllHouses());
     }
 
     #[Route('/', name: 'houses_add', methods: ['POST'])]
@@ -42,28 +42,28 @@ class HousesController extends AbstractController
         [
             'house' => $house,
             'error' => $err,
-        ] = $this->houseSerialize($request);
+        ] = $this->houseDeserialize($request);
 
         if ($err) {
-            return $this->json(
+            return new JsonResponse(
                 $err,
                 Response::HTTP_BAD_REQUEST
             );
         }
 
-        $err = $this->validateHouse($house);
-        if (! empty($err)) {
-            return $this->json(
+        $errs = $this->validateHouse($house);
+        if (! empty($errs)) {
+            return new JsonResponse(
                 [
                     'status' => 'Validation failed',
-                    'errors' => $err,
+                    'errors' => $errs,
                 ],
                 Response::HTTP_BAD_REQUEST
             );
         }
 
         $this->houses_repository->addHouse($house);
-        return $this->json(
+        return new JsonResponse(
             ['status' => 'House created!'],
             Response::HTTP_CREATED
         );
@@ -74,13 +74,13 @@ class HousesController extends AbstractController
     {
         $house = $this->houses_repository->findHouseById($id);
         if (! $house) {
-            return $this->json(
+            return new JsonResponse(
                 ['status' => 'House not found'],
                 Response::HTTP_NOT_FOUND
             );
         }
 
-        return $this->json($house);
+        return new JsonResponse($house);
     }
 
     #[Route('/{id}', name: 'houses_replace_by_id', methods: ['PUT'])]
@@ -89,36 +89,36 @@ class HousesController extends AbstractController
         [
             'house' => $replacing_house,
             'error' => $err,
-        ] = $this->houseSerialize($request);
+        ] = $this->houseDeserialize($request);
 
         if ($err) {
-            return $this->json(
+            return new JsonResponse(
                 $err,
                 Response::HTTP_BAD_REQUEST
             );
         }
 
         if (! $this->houses_repository->findHouseById($id)) {
-            return $this->json(
+            return new JsonResponse(
                 ['status' => 'House not found'],
                 Response::HTTP_NOT_FOUND
             );
         }
         $replacing_house->setId($id);
 
-        $err = $this->validateHouse($replacing_house);
-        if (! empty($err)) {
-            return $this->json(
+        $errs = $this->validateHouse($replacing_house);
+        if (! empty($errs)) {
+            return new JsonResponse(
                 [
                     'status' => 'Validation failed',
-                    'errors' => $err,
+                    'errors' => $errs,
                 ],
                 Response::HTTP_BAD_REQUEST
             );
         }
 
         $this->houses_repository->updateHouse($replacing_house);
-        return $this->json(
+        return new JsonResponse(
             ['status' => 'House replaced!'],
             Response::HTTP_OK
         );
@@ -130,15 +130,15 @@ class HousesController extends AbstractController
         [
             'house' => $updated_house,
             'error' => $err,
-        ] = $this->houseSerialize($request);
+        ] = $this->houseDeserialize($request);
 
         if ($err) {
-            return $this->json($err, Response::HTTP_BAD_REQUEST);
+            return new JsonResponse($err, Response::HTTP_BAD_REQUEST);
         }
 
         $existing_house = $this->houses_repository->findHouseById($id);
         if (! $existing_house) {
-            return $this->json(
+            return new JsonResponse(
                 ['status' => 'House not found'],
                 Response::HTTP_NOT_FOUND
             );
@@ -154,19 +154,19 @@ class HousesController extends AbstractController
             ->setHasParking($updated_house->hasParking() ?? $existing_house->hasParking())
             ->setHasSeaView($updated_house->hasSeaView() ?? $existing_house->hasSeaView());
 
-        $err = $this->validateHouse($existing_house);
-        if (! empty($err)) {
-            return $this->json(
+        $errs = $this->validateHouse($existing_house);
+        if (! empty($errs)) {
+            return new JsonResponse(
                 [
                     'status' => 'Validation failed',
-                    'errors' => $err,
+                    'errors' => $errs,
                 ],
                 Response::HTTP_BAD_REQUEST
             );
         }
 
         $this->houses_repository->updateHouse($existing_house);
-        return $this->json(
+        return new JsonResponse(
             ['status' => 'House updated!'],
             Response::HTTP_OK
         );
@@ -175,28 +175,30 @@ class HousesController extends AbstractController
     #[Route('/{id}', name: 'houses_delete', methods: ['DELETE'])]
     public function deleteHouse(Request $request, int $id): JsonResponse
     {
-        if (! $this->houses_repository->findHouseById($id)) {
-            return $this->json(
+        $house = $this->houses_repository->findHouseById($id);
+
+        if (! $house) {
+            return new JsonResponse(
                 ['status' => 'House not found'],
                 Response::HTTP_NOT_FOUND
             );
         }
 
-        if (! $this->houses_repository->findHouseById($id)->isAvailable()) {
-            return $this->json(
+        if (! $house->isAvailable()) {
+            return new JsonResponse(
                 ['status' => 'House is booked'],
                 Response::HTTP_BAD_REQUEST
             );
         }
 
         $this->houses_repository->deleteHouse($id);
-        return $this->json(
+        return new JsonResponse(
             ['status' => 'House deleted!'],
             Response::HTTP_OK
         );
     }
 
-    private function houseSerialize(Request $request): array
+    private function houseDeserialize(Request $request): array
     {
         if ($request->getContentTypeFormat() !== 'json') {
             return [
@@ -238,10 +240,7 @@ class HousesController extends AbstractController
                     'message' => $err->getMessage(),
                 ];
             }
-            return [
-                'status' => 'Validation failed',
-                'errors' => $errs_array,
-            ];
+            return $errs_array;
         }
         return [];
     }
