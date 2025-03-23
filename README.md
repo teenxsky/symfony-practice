@@ -20,6 +20,25 @@ cp .env.dev .env.dev.local
 cp .env.test .env.test.local
 ```
 
+### Run API testing
+- To run unit and integration testing, run the following command: 
+
+```bash
+make run-testing
+```
+
+- To run only unit testing, run the following command: 
+
+```bash
+make run-unit-testing
+```
+
+- To run only integration testing, run the following command: 
+
+```bash
+make run-integration-testing
+```
+
 ### Building the Docker Images
 
 To build the Docker images for the development environment, run the following command:

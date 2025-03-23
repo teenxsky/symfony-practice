@@ -53,6 +53,16 @@ install:
 shell-backend:
 	$(DOCKER_COMPOSE) exec backend bash
 
-# Test the backend container
-test:
-	$(DOCKER_COMPOSE) exec backend bash -c "bin/phpunit"
+# Run all tests in the backend container
+run-testing:
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit"
+
+# Run unit tests in the backend container
+run-unit-testing:
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit tests/Repository/HousesRepositoryTest.php"
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit tests/Repository/BookingsRepositoryTest.php"
+
+# Run integration tests in the backend container
+run-integration-testing:
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit tests/Controller/BookingsControllerTest.php"
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit tests/Controller/HousesControllerTest.php"
