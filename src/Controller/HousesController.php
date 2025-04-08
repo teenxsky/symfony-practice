@@ -2,6 +2,7 @@
 namespace App\Controller;
 
 use App\Entity\House;
+use App\Exception\DeserializeContentException;
 use App\Repository\HousesRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -26,8 +27,8 @@ class HousesController extends AbstractController
         ValidatorInterface $validator
     ) {
         $this->housesRepository = $housesRepository;
-        $this->serializer        = $serializer;
-        $this->validator         = $validator;
+        $this->serializer       = $serializer;
+        $this->validator        = $validator;
     }
 
     #[Route('/', name: 'houses_list', methods: ['GET'])]
@@ -39,15 +40,12 @@ class HousesController extends AbstractController
     #[Route('/', name: 'houses_add', methods: ['POST'])]
     public function addHouse(Request $request): JsonResponse
     {
-        [
-            'house' => $house,
-            'error' => $err,
-        ] = $this->houseDeserialize($request);
-
-        if ($err) {
+        try {
+            $house = $this->houseDeserialize($request);
+        } catch (DeserializeContentException $e) {
             return new JsonResponse(
-                $err,
-                Response::HTTP_BAD_REQUEST
+                ['status' => $e->getMessage()],
+                $e->getStatusCode()
             );
         }
 
@@ -86,15 +84,12 @@ class HousesController extends AbstractController
     #[Route('/{id}', name: 'houses_replace_by_id', methods: ['PUT'])]
     public function replaceHouse(Request $request, int $id): JsonResponse
     {
-        [
-            'house' => $replacingHouse,
-            'error' => $err,
-        ] = $this->houseDeserialize($request);
-
-        if ($err) {
+        try {
+            $replacingHouse = $this->houseDeserialize($request);
+        } catch (DeserializeContentException $e) {
             return new JsonResponse(
-                $err,
-                Response::HTTP_BAD_REQUEST
+                ['status' => $e->getMessage()],
+                $e->getStatusCode()
             );
         }
 
@@ -127,13 +122,13 @@ class HousesController extends AbstractController
     #[Route('/{id}', name: 'houses_update_by_id', methods: ['PATCH'])]
     public function updateHouse(Request $request, int $id): JsonResponse
     {
-        [
-            'house' => $updatedHouse,
-            'error' => $err,
-        ] = $this->houseDeserialize($request);
-
-        if ($err) {
-            return new JsonResponse($err, Response::HTTP_BAD_REQUEST);
+        try {
+            $updatedHouse = $this->houseDeserialize($request);
+        } catch (DeserializeContentException $e) {
+            return new JsonResponse(
+                ['status' => $e->getMessage()],
+                $e->getStatusCode()
+            );
         }
 
         $existingHouse = $this->housesRepository->findHouseById($id);
@@ -198,34 +193,20 @@ class HousesController extends AbstractController
         );
     }
 
-    private function houseDeserialize(Request $request): array
+    private function houseDeserialize(Request $request): House
     {
         if ($request->getContentTypeFormat() !== 'json') {
-            return [
-                'house' => null,
-                'error' => [
-                    'status' => 'Unsupported content format',
-                ],
-            ];
+            throw new DeserializeContentException();
         }
+
         try {
-            $house = $this->serializer->deserialize(
+            return $this->serializer->deserialize(
                 $request->getContent(),
                 House::class,
                 'json'
             );
-            return [
-                'house' => $house,
-                'error' => null,
-            ];
-        } catch (NotEncodableValueException | UnexpectedValueException $err) {
-            return [
-                'house' => null,
-                'error' => [
-                    'status' => 'Invalid JSON',
-                    'error'  => $err->getMessage(),
-                ],
-            ];
+        } catch (NotEncodableValueException | UnexpectedValueException $e) {
+            throw new DeserializeContentException($e->getMessage());
         }
     }
 

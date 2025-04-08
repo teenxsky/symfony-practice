@@ -234,6 +234,11 @@ class HousesControllerTest extends WebTestCase
 
     public function testReplaceHouseNotFound()
     {
+        $this->serializer
+            ->expects($this->once())
+            ->method('deserialize')
+            ->willReturn(new House());
+
         $this->client->request(
             'PUT',
             '/api/v1/houses/999',
@@ -264,10 +269,12 @@ class HousesControllerTest extends WebTestCase
 
         $this->serializer
             ->expects($this->once())
-            ->method('deserialize') 
-            ->willReturn((new House())
+            ->method('deserialize')
+            ->willReturn(
+                (new House())
                     ->setIsAvailable(false)
-                    ->setBedroomsCount(19));
+                    ->setBedroomsCount(19)
+            );
 
         $this->client->request(
             'PATCH',
@@ -293,6 +300,11 @@ class HousesControllerTest extends WebTestCase
 
     public function testUpdateHouseNotFound()
     {
+        $this->serializer
+            ->expects($this->once())
+            ->method('deserialize')
+            ->willReturn(new House());
+
         $this->client->request(
             'PATCH',
             '/api/v1/houses/999',

@@ -8,7 +8,6 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class BookingsControllerTest extends WebTestCase
@@ -225,6 +224,11 @@ class BookingsControllerTest extends WebTestCase
 
     public function testReplaceBookingNotFound()
     {
+        $this->serializer
+            ->expects($this->once())
+            ->method('deserialize')
+            ->willReturn(new Booking());
+
         $this->client->request(
             'PUT',
             '/api/v1/bookings/999',
@@ -246,7 +250,7 @@ class BookingsControllerTest extends WebTestCase
     public function testUpdateBookingSuccess()
     {
         $updatedData = [
-            'house_id' => '2',
+            'house_id' => 2,
             'comment'  => 'Updated booking 1',
         ];
 
@@ -256,9 +260,11 @@ class BookingsControllerTest extends WebTestCase
         $this->serializer
             ->expects($this->once())
             ->method('deserialize')
-            ->willReturn((new Booking())
+            ->willReturn(
+                (new Booking())
                     ->setHouseId(2)
-                    ->setComment('Updated booking 1'));
+                    ->setComment('Updated booking 1')
+            );
 
         $this->client->request(
             'PATCH',

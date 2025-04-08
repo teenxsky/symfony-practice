@@ -2,6 +2,7 @@
 namespace App\Controller;
 
 use App\Entity\Booking;
+use App\Exception\DeserializeContentException;
 use App\Repository\BookingsRepository;
 use App\Repository\HousesRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -46,13 +47,13 @@ class BookingsController extends AbstractController
     #[Route('/', name: 'bookings_add', methods: ['POST'])]
     public function addBooking(Request $request): JsonResponse
     {
-        [
-            'booking' => $booking,
-            'error'   => $err,
-        ] = $this->bookingDeserialize($request);
-
-        if ($err) {
-            return new JsonResponse($err, Response::HTTP_BAD_REQUEST);
+        try {
+            $booking = $this->bookingDeserialize($request);
+        } catch (DeserializeContentException $e) {
+            return new JsonResponse(
+                ['status' => $e->getMessage()],
+                $e->getStatusCode()
+            );
         }
 
         $errs = $this->validateBooking($booking);
@@ -107,13 +108,13 @@ class BookingsController extends AbstractController
     #[Route('/{id}', name: 'bookings_replace_by_id', methods: ['PUT'])]
     public function replaceBooking(Request $request, int $id): JsonResponse
     {
-        [
-            'booking' => $replacingBooking,
-            'error'   => $err,
-        ] = $this->bookingDeserialize($request);
-
-        if ($err) {
-            return new JsonResponse($err, Response::HTTP_BAD_REQUEST);
+        try {
+            $replacingBooking = $this->bookingDeserialize($request);
+        } catch (DeserializeContentException $e) {
+            return new JsonResponse(
+                ['status' => $e->getMessage()],
+                $e->getStatusCode()
+            );
         }
 
         $existingBooking = $this->bookingsRepository->findBookingById($id);
@@ -169,13 +170,13 @@ class BookingsController extends AbstractController
     #[Route('/{id}', name: 'bookings_update_by_id', methods: ['PATCH'])]
     public function updateBooking(Request $request, int $id): JsonResponse
     {
-        [
-            'booking' => $updatedBooking,
-            'error'   => $err,
-        ] = $this->bookingDeserialize($request);
-
-        if ($err) {
-            return new JsonResponse($err, Response::HTTP_BAD_REQUEST);
+        try {
+            $updatedBooking = $this->bookingDeserialize($request);
+        } catch (DeserializeContentException $e) {
+            return new JsonResponse(
+                ['status' => $e->getMessage()],
+                $e->getStatusCode()
+            );
         }
 
         $existingBooking = $this->bookingsRepository->findBookingById($id);
@@ -255,34 +256,20 @@ class BookingsController extends AbstractController
         );
     }
 
-    private function bookingDeserialize(Request $request): array
+    private function bookingDeserialize(Request $request): Booking
     {
         if ($request->getContentTypeFormat() !== 'json') {
-            return [
-                'booking' => null,
-                'error'   => [
-                    'status' => 'Unsupported content format',
-                ],
-            ];
+            throw new DeserializeContentException();
         }
+
         try {
-            $booking = $this->serializer->deserialize(
+            return $this->serializer->deserialize(
                 $request->getContent(),
                 Booking::class,
                 'json'
             );
-            return [
-                'booking' => $booking,
-                'error'   => null,
-            ];
-        } catch (NotEncodableValueException | UnexpectedValueException $err) {
-            return [
-                'booking' => null,
-                'error'   => [
-                    'status' => 'Invalid JSON',
-                    'error'  => $err->getMessage(),
-                ],
-            ];
+        } catch (NotEncodableValueException | UnexpectedValueException $e) {
+            throw new DeserializeContentException($e->getMessage());
         }
     }
 
