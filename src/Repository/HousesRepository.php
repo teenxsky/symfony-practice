@@ -5,7 +5,7 @@ use App\Entity\House;
 
 class HousesRepository
 {
-    private string $file_path;
+    private string $filePath;
 
     private const HEADERS = [
         'id',
@@ -19,12 +19,12 @@ class HousesRepository
         'has_sea_view',
     ];
 
-    public function __construct(string $file_path)
+    public function __construct(string $filePath)
     {
-        $this->file_path = $file_path;
+        $this->filePath = $filePath;
 
-        if (! file_exists($this->file_path)) {
-            $handle = fopen($this->file_path, 'w');
+        if (!file_exists($this->filePath)) {
+            $handle = fopen($this->filePath, 'w');
             fputcsv($handle, self::HEADERS);
             fclose($handle);
         }
@@ -33,7 +33,7 @@ class HousesRepository
     public function findAllHouses(): array
     {
         $houses = [];
-        if (($handle = fopen($this->file_path, 'r')) !== false) {
+        if (($handle = fopen($this->filePath, 'r')) !== false) {
             fgetcsv($handle, 1000, ',');
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
                 $house = (new House())
@@ -67,11 +67,11 @@ class HousesRepository
 
     public function addHouse(House $house): void
     {
-        $id     = 1;
+        $id = 1;
         $houses = $this->findAllHouses();
-        if (! empty($houses)) {
-            $last_house = end($houses);
-            $id         = (int) $last_house->getId() + 1;
+        if (!empty($houses)) {
+            $lastHouse = end($houses);
+            $id = (int) $lastHouse->getId() + 1;
         }
 
         $house->setId($id);
@@ -82,9 +82,9 @@ class HousesRepository
     public function updateHouse(House $house): void
     {
         $houses = $this->findAllHouses();
-        foreach ($houses as &$existing_house) {
-            if ($existing_house->getId() == $house->getId()) {
-                $existing_house = $house;
+        foreach ($houses as &$existingHouse) {
+            if ($existingHouse->getId() == $house->getId()) {
+                $existingHouse = $house;
                 break;
             }
         }
@@ -107,18 +107,18 @@ class HousesRepository
 
     private function saveHouses(array $houses, string $mode): void
     {
-        if (! in_array($mode, ['w', 'a'])) {
+        if (!in_array($mode, ['w', 'a'])) {
             throw new \InvalidArgumentException('Invalid mode. Use "w" or "a".');
         }
 
-        $handle = fopen($this->file_path, $mode);
+        $handle = fopen($this->filePath, $mode);
 
         if ($mode === 'w') {
             fputcsv($handle, self::HEADERS);
         }
 
         foreach ($houses as $house) {
-            $house_data = [
+            $houseData = [
                 $house->getId(),
                 $house->isAvailable(),
                 $house->getBedroomsCount(),
@@ -129,7 +129,7 @@ class HousesRepository
                 $house->hasParking(),
                 $house->hasSeaView(),
             ];
-            fputcsv($handle, $house_data);
+            fputcsv($handle, $houseData);
         }
         fclose($handle);
     }

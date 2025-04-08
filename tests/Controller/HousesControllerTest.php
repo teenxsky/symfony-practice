@@ -18,7 +18,7 @@ class HousesControllerTest extends WebTestCase
     private $validator;
     private $serializer;
 
-    private static $houses_repository;
+    private static $housesRepository;
 
     public static function setUpBeforeClass(): void
     {
@@ -29,7 +29,7 @@ class HousesControllerTest extends WebTestCase
     {
         copy(__DIR__ . '/../Resources/test_houses.csv', __DIR__ . '/../Resources/~$test_houses.csv');
 
-        self::$houses_repository = new HousesRepository(__DIR__ . '/../Resources/~$test_houses.csv');
+        self::$housesRepository = new HousesRepository(__DIR__ . '/../Resources/~$test_houses.csv');
     }
 
     protected function setUp(): void
@@ -39,7 +39,7 @@ class HousesControllerTest extends WebTestCase
 
         $this->client = static::createClient();
         $container    = ($this->client->getContainer());
-        $container->set(HousesRepository::class, self::$houses_repository);
+        $container->set(HousesRepository::class, self::$housesRepository);
         $container->set(SerializerInterface::class, $this->serializer);
         $container->set(ValidatorInterface::class, $this->validator);
     }
@@ -53,9 +53,9 @@ class HousesControllerTest extends WebTestCase
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertJson($response->getContent());
 
-        $expected_data = self::$houses_repository->findAllHouses();
+        $expectedData = self::$housesRepository->findAllHouses();
         $this->assertEquals(
-            json_encode($expected_data),
+            json_encode($expectedData),
             $response->getContent()
         );
     }
@@ -69,9 +69,9 @@ class HousesControllerTest extends WebTestCase
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertJson($response->getContent());
 
-        $expected_data = self::$houses_repository->findHouseById(1);
+        $expectedData = self::$housesRepository->findHouseById(1);
         $this->assertEquals(
-            json_encode($expected_data),
+            json_encode($expectedData),
             $response->getContent()
         );
     }
@@ -128,7 +128,7 @@ class HousesControllerTest extends WebTestCase
         $this->assertJson($response->getContent());
         $this->assertEquals(json_encode(['status' => 'House created!']), $response->getContent());
 
-        $addedHouse = self::$houses_repository->findHouseById(5);
+        $addedHouse = self::$housesRepository->findHouseById(5);
         $this->assertNotNull($addedHouse);
     }
 
@@ -202,8 +202,8 @@ class HousesControllerTest extends WebTestCase
             ->setHasParking(true)
             ->setHasSeaView(false);
 
-        $house_before_replacing = self::$houses_repository->findHouseById(1);
-        $this->assertFalse($house_before_replacing->isAvailable());
+        $houseBeforeReplacing = self::$housesRepository->findHouseById(1);
+        $this->assertFalse($houseBeforeReplacing->isAvailable());
 
         $this->serializer
             ->expects($this->once())
@@ -228,8 +228,8 @@ class HousesControllerTest extends WebTestCase
             $response->getContent()
         );
 
-        $house_after_replacing = self::$houses_repository->findHouseById(1);
-        $this->assertTrue($house_after_replacing->isAvailable());
+        $houseAfterReplacing = self::$housesRepository->findHouseById(1);
+        $this->assertTrue($houseAfterReplacing->isAvailable());
     }
 
     public function testReplaceHouseNotFound()
@@ -254,13 +254,13 @@ class HousesControllerTest extends WebTestCase
 
     public function testUpdateHouseSuccess()
     {
-        $updated_data = [
+        $updatedData = [
             'is_available'   => false,
             'bedrooms_count' => 19,
         ];
 
-        $house_before_replacing = self::$houses_repository->findHouseById(2);
-        $this->assertEquals(3, $house_before_replacing->getBedroomsCount());
+        $houseBeforeReplacing = self::$housesRepository->findHouseById(2);
+        $this->assertEquals(3, $houseBeforeReplacing->getBedroomsCount());
 
         $this->serializer
             ->expects($this->once())
@@ -275,7 +275,7 @@ class HousesControllerTest extends WebTestCase
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode($updated_data)
+            json_encode($updatedData)
         );
 
         $response = $this->client->getResponse();
@@ -287,8 +287,8 @@ class HousesControllerTest extends WebTestCase
             $response->getContent()
         );
 
-        $house_after_replacing = self::$houses_repository->findHouseById(2);
-        $this->assertEquals(19, $house_after_replacing->getBedroomsCount());
+        $houseAfterReplacing = self::$housesRepository->findHouseById(2);
+        $this->assertEquals(19, $houseAfterReplacing->getBedroomsCount());
     }
 
     public function testUpdateHouseNotFound()
@@ -324,8 +324,8 @@ class HousesControllerTest extends WebTestCase
             $response->getContent()
         );
 
-        $deleted_house = self::$houses_repository->findHouseById(1);
-        $this->assertNull($deleted_house);
+        $deletedHouse = self::$housesRepository->findHouseById(1);
+        $this->assertNull($deletedHouse);
     }
 
     public function testDeleteHouseBooked()

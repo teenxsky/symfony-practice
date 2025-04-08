@@ -25,12 +25,12 @@ class Booking
         maxMessage: 'Phone number cannot be longer than {{ limit }} characters'
     )]
     #[Assert\Type('string')]
-    private ?string $phone_number = null;
+    private ?string $phoneNumber = null;
 
     // #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('integer')]
-    private ?int $house_id = null;
+    private ?int $houseId = null;
 
     // #[ORM\Column(length: 255, nullable: true)]
     #[Assert\Type('string')]
@@ -54,24 +54,24 @@ class Booking
 
     public function getPhoneNumber(): ?string
     {
-        return $this->phone_number;
+        return $this->phoneNumber;
     }
 
-    public function setPhoneNumber(string $phone_number): static
+    public function setPhoneNumber(string $phoneNumber): static
     {
-        $this->phone_number = $phone_number;
+        $this->phoneNumber = $phoneNumber;
 
         return $this;
     }
 
     public function getHouseId(): ?int
     {
-        return $this->house_id;
+        return $this->houseId;
     }
 
-    public function setHouseId(int $house_id): static
+    public function setHouseId(int $houseId): static
     {
-        $this->house_id = $house_id;
+        $this->houseId = $houseId;
 
         return $this;
     }

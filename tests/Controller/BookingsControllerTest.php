@@ -18,8 +18,8 @@ class BookingsControllerTest extends WebTestCase
     private $validator;
     private $serializer;
 
-    private static $houses_repository;
-    private static $bookings_repository;
+    private static $housesRepository;
+    private static $bookingsRepository;
 
     public static function setUpBeforeClass(): void
     {
@@ -31,8 +31,8 @@ class BookingsControllerTest extends WebTestCase
         copy(__DIR__ . '/../Resources/test_bookings.csv', __DIR__ . '/../Resources/~$test_bookings.csv');
         copy(__DIR__ . '/../Resources/test_houses.csv', __DIR__ . '/../Resources/~$test_houses.csv');
 
-        self::$bookings_repository = new BookingsRepository(__DIR__ . '/../Resources/~$test_bookings.csv');
-        self::$houses_repository   = new HousesRepository(__DIR__ . '/../Resources/~$test_houses.csv');
+        self::$bookingsRepository = new BookingsRepository(__DIR__ . '/../Resources/~$test_bookings.csv');
+        self::$housesRepository   = new HousesRepository(__DIR__ . '/../Resources/~$test_houses.csv');
     }
 
     protected function setUp(): void
@@ -42,8 +42,8 @@ class BookingsControllerTest extends WebTestCase
 
         $this->client = static::createClient();
         $container    = ($this->client->getContainer());
-        $container->set(BookingsRepository::class, self::$bookings_repository);
-        $container->set(HousesRepository::class, self::$houses_repository);
+        $container->set(BookingsRepository::class, self::$bookingsRepository);
+        $container->set(HousesRepository::class, self::$housesRepository);
         $container->set(SerializerInterface::class, $this->serializer);
         $container->set(ValidatorInterface::class, $this->validator);
     }
@@ -57,9 +57,9 @@ class BookingsControllerTest extends WebTestCase
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertJson($response->getContent());
 
-        $expected_data = self::$bookings_repository->findAllBookings();
+        $expectedData = self::$bookingsRepository->findAllBookings();
         $this->assertEquals(
-            json_encode($expected_data),
+            json_encode($expectedData),
             $response->getContent()
         );
     }
@@ -94,7 +94,7 @@ class BookingsControllerTest extends WebTestCase
             $response->getContent()
         );
 
-        $house = self::$houses_repository->findHouseById(3);
+        $house = self::$housesRepository->findHouseById(3);
         $this->assertFalse($house->isAvailable());
     }
 
@@ -165,9 +165,9 @@ class BookingsControllerTest extends WebTestCase
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertJson($response->getContent());
 
-        $expected_data = self::$bookings_repository->findBookingById(1);
+        $expectedData = self::$bookingsRepository->findBookingById(1);
         $this->assertEquals(
-            json_encode($expected_data),
+            json_encode($expectedData),
             $response->getContent()
         );
     }
@@ -187,19 +187,19 @@ class BookingsControllerTest extends WebTestCase
 
     public function testReplaceBookingSuccess()
     {
-        $new_booking = (new Booking())
+        $newBooking = (new Booking())
             ->setId(3)
             ->setHouseId(4)
             ->setPhoneNumber('1234567890')
             ->setComment('Replaced booking 2');
 
-        $house_before = self::$houses_repository->findHouseById(4);
-        $this->assertTrue($house_before->isAvailable());
+        $houseBefore = self::$housesRepository->findHouseById(4);
+        $this->assertTrue($houseBefore->isAvailable());
 
         $this->serializer
             ->expects($this->once())
             ->method('deserialize')
-            ->willReturn($new_booking);
+            ->willReturn($newBooking);
 
         $this->client->request(
             'PUT',
@@ -207,7 +207,7 @@ class BookingsControllerTest extends WebTestCase
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode($new_booking)
+            json_encode($newBooking)
         );
 
         $response = $this->client->getResponse();
@@ -219,8 +219,8 @@ class BookingsControllerTest extends WebTestCase
             $response->getContent()
         );
 
-        $house_after = self::$houses_repository->findHouseById(4);
-        $this->assertFalse($house_after->isAvailable());
+        $houseAfter = self::$housesRepository->findHouseById(4);
+        $this->assertFalse($houseAfter->isAvailable());
     }
 
     public function testReplaceBookingNotFound()
@@ -245,13 +245,13 @@ class BookingsControllerTest extends WebTestCase
 
     public function testUpdateBookingSuccess()
     {
-        $updated_data = [
+        $updatedData = [
             'house_id' => '2',
             'comment'  => 'Updated booking 1',
         ];
 
-        $house_before = self::$houses_repository->findHouseById(2);
-        $this->assertTrue($house_before->isAvailable());
+        $houseBefore = self::$housesRepository->findHouseById(2);
+        $this->assertTrue($houseBefore->isAvailable());
 
         $this->serializer
             ->expects($this->once())
@@ -266,7 +266,7 @@ class BookingsControllerTest extends WebTestCase
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode($updated_data)
+            json_encode($updatedData)
         );
 
         $response = $this->client->getResponse();
@@ -278,8 +278,8 @@ class BookingsControllerTest extends WebTestCase
             $response->getContent()
         );
 
-        $house_after = self::$houses_repository->findHouseById(2);
-        $this->assertFalse($house_after->isAvailable());
+        $houseAfter = self::$housesRepository->findHouseById(2);
+        $this->assertFalse($houseAfter->isAvailable());
     }
 
     public function testDeleteBookingSuccess()
@@ -295,7 +295,7 @@ class BookingsControllerTest extends WebTestCase
             $response->getContent()
         );
 
-        $house = self::$houses_repository->findHouseById(2);
+        $house = self::$housesRepository->findHouseById(2);
         $this->assertTrue($house->isAvailable());
     }
 }

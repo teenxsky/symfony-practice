@@ -8,13 +8,13 @@ use ReflectionClass;
 
 class BookingsRepositoryTest extends TestCase
 {
-    private $file_path = __DIR__ . '/../Resources/~$test_bookings.csv';
-    private $bookings  = [];
+    private $filePath = __DIR__ . '/../Resources/~$test_bookings.csv';
+    private $bookings = [];
 
     protected function setUp(): void
     {
-        if (file_exists($this->file_path)) {
-            unlink($this->file_path);
+        if (file_exists($this->filePath)) {
+            unlink($this->filePath);
         }
 
         $this->bookings[] = (new Booking())
@@ -34,8 +34,8 @@ class BookingsRepositoryTest extends TestCase
 
     protected function tearDown(): void
     {
-        if (file_exists($this->file_path)) {
-            unlink($this->file_path);
+        if (file_exists($this->filePath)) {
+            unlink($this->filePath);
         }
 
         $this->bookings = [];
@@ -43,7 +43,7 @@ class BookingsRepositoryTest extends TestCase
 
     public function testFindAllBookings()
     {
-        $repository = new BookingsRepository($this->file_path);
+        $repository = new BookingsRepository($this->filePath);
 
         $bookings = $repository->findAllBookings();
         $this->assertCount(0, $bookings);
@@ -58,7 +58,7 @@ class BookingsRepositoryTest extends TestCase
 
     public function testFindBookingById()
     {
-        $repository = new BookingsRepository($this->file_path);
+        $repository = new BookingsRepository($this->filePath);
         foreach ($this->bookings as $booking) {
             $repository->addBooking($booking);
         }
@@ -70,12 +70,12 @@ class BookingsRepositoryTest extends TestCase
         $this->assertEquals("+0987654321", $booking->getPhoneNumber());
         $this->assertEquals("", $booking->getComment());
 
-        $not_found_booking = $repository->findBookingById(999);
+        $notFoundBooking = $repository->findBookingById(999);
     }
 
     public function testAddBooking()
     {
-        $repository = new BookingsRepository($this->file_path);
+        $repository = new BookingsRepository($this->filePath);
         $repository->addBooking($this->bookings[0]);
 
         $bookings = $repository->findAllBookings();
@@ -88,32 +88,32 @@ class BookingsRepositoryTest extends TestCase
 
     public function testUpdateBooking()
     {
-        $repository = new BookingsRepository($this->file_path);
+        $repository = new BookingsRepository($this->filePath);
 
         $booking = $this->bookings[2];
         $repository->addBooking($booking);
 
-        $uploaded_booking = $repository->findBookingById(1);
-        $this->assertNotNull($uploaded_booking);
-        $this->assertEquals(3, $uploaded_booking->getHouseId());
-        $this->assertEquals("+1122334455", $uploaded_booking->getPhoneNumber());
-        $this->assertEquals("Test comment 3", $uploaded_booking->getComment());
+        $uploadedBooking = $repository->findBookingById(1);
+        $this->assertNotNull($uploadedBooking);
+        $this->assertEquals(3, $uploadedBooking->getHouseId());
+        $this->assertEquals("+1122334455", $uploadedBooking->getPhoneNumber());
+        $this->assertEquals("Test comment 3", $uploadedBooking->getComment());
 
         $booking->setPhoneNumber("+5555555555");
         $booking->setHouseId(1);
         $booking->setComment("Test comment 1");
         $repository->updateBooking($booking);
 
-        $updated_booking = $repository->findBookingById(1);
-        $this->assertNotNull($updated_booking);
-        $this->assertEquals(1, $updated_booking->getHouseId());
-        $this->assertEquals("+5555555555", $updated_booking->getPhoneNumber());
-        $this->assertEquals("Test comment 1", $updated_booking->getComment());
+        $updatedBooking = $repository->findBookingById(1);
+        $this->assertNotNull($updatedBooking);
+        $this->assertEquals(1, $updatedBooking->getHouseId());
+        $this->assertEquals("+5555555555", $updatedBooking->getPhoneNumber());
+        $this->assertEquals("Test comment 1", $updatedBooking->getComment());
     }
 
     public function testDeleteBooking()
     {
-        $repository = new BookingsRepository($this->file_path);
+        $repository = new BookingsRepository($this->filePath);
 
         foreach ($this->bookings as $booking) {
             $repository->addBooking($booking);
@@ -136,10 +136,10 @@ class BookingsRepositoryTest extends TestCase
 
     public function testSaveBookingsPrivate()
     {
-        $repository = new BookingsRepository($this->file_path);
+        $repository = new BookingsRepository($this->filePath);
 
         $reflection = new ReflectionClass($repository);
-        $method     = $reflection->getMethod('saveBookings');
+        $method = $reflection->getMethod('saveBookings');
         $this->assertTrue($method->isPrivate());
     }
 }
