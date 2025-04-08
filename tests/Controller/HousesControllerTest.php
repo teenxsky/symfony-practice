@@ -55,8 +55,8 @@ class HousesControllerTest extends WebTestCase
 
         $expectedData = self::$housesRepository->findAllHouses();
         $this->assertEquals(
-            json_encode($expectedData),
-            $response->getContent()
+            json_decode(json_encode($expectedData)),
+            json_decode($response->getContent())
         );
     }
 
@@ -71,8 +71,8 @@ class HousesControllerTest extends WebTestCase
 
         $expectedData = self::$housesRepository->findHouseById(1);
         $this->assertEquals(
-            json_encode($expectedData),
-            $response->getContent()
+            json_decode(json_encode($expectedData)),
+            json_decode($response->getContent())
         );
     }
 

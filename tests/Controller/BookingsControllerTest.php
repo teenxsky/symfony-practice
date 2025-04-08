@@ -58,8 +58,8 @@ class BookingsControllerTest extends WebTestCase
 
         $expectedData = self::$bookingsRepository->findAllBookings();
         $this->assertEquals(
-            json_encode($expectedData),
-            $response->getContent()
+            json_decode(json_encode($expectedData)),
+            json_decode($response->getContent())
         );
     }
 
@@ -166,8 +166,8 @@ class BookingsControllerTest extends WebTestCase
 
         $expectedData = self::$bookingsRepository->findBookingById(1);
         $this->assertEquals(
-            json_encode($expectedData),
-            $response->getContent()
+            json_decode(json_encode($expectedData)),
+            json_decode($response->getContent())
         );
     }
 
