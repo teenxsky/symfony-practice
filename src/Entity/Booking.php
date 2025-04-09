@@ -87,4 +87,22 @@ class Booking
 
         return $this;
     }
+
+    /**
+     * @return array{
+     *     id: int,
+     *     phone_number: string,
+     *     house_id: int,
+     *     comment: string|null,
+     * }
+     */
+    public function toArray(): array
+    {
+        return [
+            'id'           => $this->getId(),
+            'phone_number' => $this->getPhoneNumber(),
+            'house_id'     => $this->getHouseId(),
+            'comment'      => $this->getComment(),
+        ];
+    }
 }

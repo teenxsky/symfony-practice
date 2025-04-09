@@ -8,8 +8,12 @@ use ReflectionClass;
 
 class HousesRepositoryTest extends TestCase
 {
-    private $filePath = __DIR__ . '/../Resources/~$test_houses.csv';
-    private $houses = [];
+    private string $filePath = __DIR__ . '/../Resources/~$test_houses.csv';
+
+    /** @var House[] */
+    private array $houses = [];
+    /** @var HousesRepository $housesRepository */
+    private HousesRepository $housesRepository;
 
     protected function setUp(): void
     {
@@ -18,6 +22,7 @@ class HousesRepositoryTest extends TestCase
         }
 
         $this->houses[] = (new House())
+            ->setId(1)
             ->setBedroomsCount(2)
             ->setPricePerNight(500)
             ->setHasAirConditioning(true)
@@ -27,6 +32,7 @@ class HousesRepositoryTest extends TestCase
             ->setHasSeaView(false);
 
         $this->houses[] = (new House())
+            ->setId(2)
             ->setBedroomsCount(21)
             ->setPricePerNight(15000)
             ->setHasAirConditioning(false)
@@ -36,6 +42,7 @@ class HousesRepositoryTest extends TestCase
             ->setHasSeaView(false);
 
         $this->houses[] = (new House())
+            ->setId(3)
             ->setBedroomsCount(20)
             ->setPricePerNight(100001)
             ->setHasAirConditioning(false)
@@ -43,6 +50,8 @@ class HousesRepositoryTest extends TestCase
             ->setHasKitchen(false)
             ->setHasParking(false)
             ->setHasSeaView(false);
+
+        $this->housesRepository = new HousesRepository($this->filePath);
     }
 
     protected function tearDown(): void
@@ -54,123 +63,178 @@ class HousesRepositoryTest extends TestCase
         $this->houses = [];
     }
 
-    public function testFindAllHouses()
+    private function assertHousesEqual(House $expected, House $actual): void
     {
-        $repository = new HousesRepository($this->filePath);
+        $this->assertEquals(
+            $expected->getId(),
+            $actual->getId());
+        $this->assertEquals(
+            $expected->getBedroomsCount(),
+            $actual->getBedroomsCount()
+        );
+        $this->assertEquals(
+            $expected->getPricePerNight(),
+            $actual->getPricePerNight()
+        );
+        $this->assertEquals(
+            $expected->hasAirConditioning(),
+            $actual->hasAirConditioning()
+        );
+        $this->assertEquals(
+            $expected->hasWifi(),
+            $actual->hasWifi()
+        );
+        $this->assertEquals(
+            $expected->hasKitchen(),
+            $actual->hasKitchen()
+        );
+        $this->assertEquals(
+            $expected->hasParking(),
+            $actual->hasParking()
+        );
+        $this->assertEquals(
+            $expected->hasSeaView(),
+            $actual->hasSeaView()
+        );
+        $this->assertEquals(
+            $expected->isAvailable(),
+            $actual->isAvailable()
+        );
+    }
 
-        $houses = $repository->findAllHouses();
-        $this->assertCount(0, $houses);
+    public function testAddHouse(): void
+    {
+        $houseId       = 1;
+        $expectedHouse = $this->houses[$houseId - 1];
+
+        $this->housesRepository->addHouse($expectedHouse);
+
+        $this->assertCount(
+            1,
+            $this->housesRepository->findAllHouses()
+        );
+
+        $actualHouse = $this->housesRepository->findHouseById($houseId);
+
+        $this->assertHousesEqual(
+            expected: $expectedHouse,
+            actual: $actualHouse
+        );
+    }
+
+    public function testFindAllHouses(): void
+    {
+        $countBefore = 0;
+        $countAfter  = count($this->houses);
+
+        $this->assertCount(
+            $countBefore,
+            $this->housesRepository->findAllHouses()
+        );
 
         foreach ($this->houses as $house) {
-            $repository->addHouse($house);
+            $this->housesRepository->addHouse($house);
         }
 
-        $houses = $repository->findAllHouses();
-        $this->assertCount(3, $houses);
+        $houses = $this->housesRepository->findAllHouses();
+
+        $this->assertCount($countAfter, $houses);
+        for ($i = 0; $i < $countAfter; $i++) {
+            $this->assertHousesEqual(
+                expected: $this->houses[$i],
+                actual: $houses[$i]
+            );
+        }
     }
 
-    public function testFindHouseById()
+    public function testFindHouseById(): void
     {
-        $repository = new HousesRepository($this->filePath);
+        $houseId       = 2;
+        $expectedHouse = $this->houses[$houseId - 1];
 
         foreach ($this->houses as $house) {
-            $repository->addHouse($house);
+            $this->housesRepository->addHouse($house);
         }
 
-        $foundHouse1 = $repository->findHouseById(1);
-        $this->assertNotNull($foundHouse1);
-        $this->assertEquals(1, $foundHouse1->getId());
-        $this->assertEquals(2, $foundHouse1->getBedroomsCount());
-        $this->assertEquals(500, $foundHouse1->getPricePerNight());
+        $actualHouse = $this->housesRepository->findHouseById($houseId);
 
-        $foundHouse2 = $repository->findHouseById(2);
-        $this->assertNotNull($foundHouse2);
-        $this->assertEquals(2, $foundHouse2->getId());
-        $this->assertEquals(21, $foundHouse2->getBedroomsCount());
-        $this->assertEquals(15000, $foundHouse2->getPricePerNight());
-
-        $foundHouse3 = $repository->findHouseById(3);
-        $this->assertNotNull($foundHouse3);
-        $this->assertEquals(3, $foundHouse3->getId());
-        $this->assertEquals(20, $foundHouse3->getBedroomsCount());
-        $this->assertEquals(100001, $foundHouse3->getPricePerNight());
-
-        $notFoundHouse = $repository->findHouseById(999);
-        $this->assertNull($notFoundHouse);
+        $this->assertNotNull($actualHouse);
+        $this->assertHousesEqual(
+            expected: $expectedHouse,
+            actual: $actualHouse
+        );
     }
 
-    public function testAddHouse()
+    public function testUpdateHouse(): void
     {
-        $repository = new HousesRepository($this->filePath);
-
-        $repository->addHouse($this->houses[0]);
-
-        $houses = $repository->findAllHouses();
-        $this->assertCount(1, $houses);
-        $this->assertEquals(1, $houses[0]->getId());
-        $this->assertTrue($houses[0]->isAvailable());
-        $this->assertEquals(2, $houses[0]->getBedroomsCount());
-        $this->assertEquals(500, $houses[0]->getPricePerNight());
-        $this->assertTrue($houses[0]->hasAirConditioning());
-        $this->assertFalse($houses[0]->hasWifi());
-        $this->assertFalse($houses[0]->hasKitchen());
-        $this->assertTrue($houses[0]->hasParking());
-        $this->assertFalse($houses[0]->hasSeaView());
-    }
-
-    public function testUpdateHouse()
-    {
-        $repository = new HousesRepository($this->filePath);
-
-        $house = $this->houses[0];
-        $repository->addHouse($house);
-        
-        $uploadedHouse = $repository->findHouseById(1);
-        $this->assertNotNull($uploadedHouse);
-        $this->assertEquals(1, $uploadedHouse->getId());
-        $this->assertEquals(2, $uploadedHouse->getBedroomsCount());
-        $this->assertEquals(500, $uploadedHouse->getPricePerNight());
-
-        $house->setBedroomsCount(3);
-        $house->setPricePerNight(600);
-        $repository->updateHouse($house);
-
-        $updatedHouse = $repository->findHouseById(1);
-        $this->assertNotNull($updatedHouse);
-        $this->assertEquals(1, $updatedHouse->getId());
-        $this->assertEquals(3, $updatedHouse->getBedroomsCount());
-        $this->assertEquals(600, $updatedHouse->getPricePerNight());
-    }
-
-    public function testDeleteHouse()
-    {
-        $repository = new HousesRepository($this->filePath);
+        $houseId = 2;
 
         foreach ($this->houses as $house) {
-            $repository->addHouse($house);
+            $this->housesRepository->addHouse($house);
         }
 
-        $houses = $repository->findAllHouses();
-        $this->assertCount(3, $houses);
-        $this->assertEquals(1, $houses[0]->getId());
-        $this->assertEquals(2, $houses[1]->getId());
-        $this->assertEquals(3, $houses[2]->getId());
+        // Before updating house
+        $expectedHouse = $this->houses[$houseId - 1];
+        $actualHouse   = $this->housesRepository->findHouseById($houseId);
 
-        $repository->deleteHouse(2);
+        $this->assertNotNull($actualHouse);
+        $this->assertHousesEqual(
+            expected: $expectedHouse,
+            actual: $actualHouse
+        );
 
-        $houses = $repository->findAllHouses();
-        $this->assertCount(2, $houses);
-        $this->assertEquals(1, $houses[0]->getId());
-        $this->assertNotEquals(2, $houses[1]->getId());
-        $this->assertEquals(3, $houses[1]->getId());
+        // After updating house
+        $expectedHouse = $this->houses[$houseId - 1];
+        $expectedHouse->setBedroomsCount(3);
+        $expectedHouse->setPricePerNight(600);
+
+        $this->housesRepository->updateHouse($expectedHouse);
+
+        $actualHouse = $this->housesRepository->findHouseById($houseId);
+
+        $this->assertNotNull($actualHouse);
+        $this->assertHousesEqual(
+            expected: $expectedHouse,
+            actual: $actualHouse
+        );
     }
 
-    public function testSaveHousesPrivate()
+    public function testDeleteHouse(): void
     {
-        $repository = new HousesRepository($this->filePath);
+        $houseId     = 2;
+        $countBefore = count($this->houses);
+        $countAfter  = count($this->houses) - 1;
 
-        $reflection = new ReflectionClass($repository);
-        $method = $reflection->getMethod('saveHouses');
+        foreach ($this->houses as $house) {
+            $this->housesRepository->addHouse($house);
+        }
+
+        $this->assertCount(
+            $countBefore,
+            $this->housesRepository->findAllHouses()
+        );
+
+        $this->housesRepository->deleteHouse($houseId);
+
+        $this->assertCount(
+            $countAfter,
+            $this->housesRepository->findAllHouses()
+        );
+        $this->assertNull(
+            $this->housesRepository->findHouseById($houseId)
+        );
+    }
+
+    public function testSaveHousesPrivate(): void
+    {
+        $methodName = 'saveHouses';
+
+        $reflection = new ReflectionClass($this->housesRepository);
+        $method     = $reflection->getMethod($methodName);
+
+        $this->assertTrue(
+            method_exists($this->housesRepository, $methodName)
+        );
         $this->assertTrue($method->isPrivate());
     }
 }

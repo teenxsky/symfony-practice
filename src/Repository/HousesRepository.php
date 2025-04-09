@@ -7,7 +7,7 @@ class HousesRepository
 {
     private string $filePath;
 
-    private const HEADERS = [
+    private const HOUSE_FIELDS = [
         'id',
         'is_available',
         'bedrooms_count',
@@ -23,30 +23,62 @@ class HousesRepository
     {
         $this->filePath = $filePath;
 
-        if (!file_exists($this->filePath)) {
+        if (! file_exists($this->filePath)) {
             $handle = fopen($this->filePath, 'w');
-            fputcsv($handle, self::HEADERS);
+            fputcsv($handle, self::HOUSE_FIELDS, ',', '"', '\\');
             fclose($handle);
         }
     }
 
+    /**
+     * @return string[]
+     */
+    public function getFields(): array
+    {
+        return self::HOUSE_FIELDS;
+    }
+
+    /**
+     * @return House[]
+     */
     public function findAllHouses(): array
     {
         $houses = [];
         if (($handle = fopen($this->filePath, 'r')) !== false) {
-            fgetcsv($handle, 1000, ',');
-            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                $house = (new House())
-                    ->setId((int) $data[0])
-                    ->setIsAvailable(filter_var($data[1], FILTER_VALIDATE_BOOLEAN))
-                    ->setBedroomsCount((int) $data[2])
-                    ->setPricePerNight((int) $data[3])
-                    ->setHasAirConditioning(filter_var($data[4], FILTER_VALIDATE_BOOLEAN))
-                    ->setHasWifi(filter_var($data[5], FILTER_VALIDATE_BOOLEAN))
-                    ->setHasKitchen(filter_var($data[6], FILTER_VALIDATE_BOOLEAN))
-                    ->setHasParking(filter_var($data[7], FILTER_VALIDATE_BOOLEAN))
-                    ->setHasSeaView(filter_var($data[8], FILTER_VALIDATE_BOOLEAN));
+            fgetcsv($handle, 1000, ',', '"', '\\');
 
+            while (($data = fgetcsv($handle, 1000, ',', '"', '\\')) !== false) {
+                $row = array_combine(
+                    keys: self::HOUSE_FIELDS,
+                    values: $data
+                );
+
+                $house = (new House())
+                    ->setId((int) $row['id'])
+                    ->setIsAvailable(
+                        (bool) $row['is_available']
+                    )
+                    ->setBedroomsCount(
+                        (int) $row['bedrooms_count']
+                    )
+                    ->setPricePerNight(
+                        (int) $row['price_per_night']
+                    )
+                    ->setHasAirConditioning(
+                        (bool) $row['has_air_conditioning']
+                    )
+                    ->setHasWifi(
+                        (bool) $row['has_wifi']
+                    )
+                    ->setHasKitchen(
+                        (bool) $row['has_kitchen']
+                    )
+                    ->setHasParking(
+                        (bool) $row['has_parking']
+                    )
+                    ->setHasSeaView(
+                        (bool) $row['has_sea_view']
+                    );
                 $houses[] = $house;
             }
             fclose($handle);
@@ -67,11 +99,11 @@ class HousesRepository
 
     public function addHouse(House $house): void
     {
-        $id = 1;
+        $id     = 1;
         $houses = $this->findAllHouses();
-        if (!empty($houses)) {
+        if (! empty($houses)) {
             $lastHouse = end($houses);
-            $id = (int) $lastHouse->getId() + 1;
+            $id        = (int) $lastHouse->getId() + 1;
         }
 
         $house->setId($id);
@@ -107,14 +139,14 @@ class HousesRepository
 
     private function saveHouses(array $houses, string $mode): void
     {
-        if (!in_array($mode, ['w', 'a'])) {
+        if (! in_array($mode, ['w', 'a'])) {
             throw new \InvalidArgumentException('Invalid mode. Use "w" or "a".');
         }
 
         $handle = fopen($this->filePath, $mode);
 
         if ($mode === 'w') {
-            fputcsv($handle, self::HEADERS);
+            fputcsv($handle, self::HOUSE_FIELDS, ',', '"', '\\');
         }
 
         foreach ($houses as $house) {
@@ -129,7 +161,7 @@ class HousesRepository
                 $house->hasParking(),
                 $house->hasSeaView(),
             ];
-            fputcsv($handle, $houseData);
+            fputcsv($handle, $houseData, ',', '"', '\\');
         }
         fclose($handle);
     }

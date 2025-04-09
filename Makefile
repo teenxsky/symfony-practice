@@ -54,15 +54,10 @@ shell-backend:
 	$(DOCKER_COMPOSE) exec backend bash
 
 # Run all tests in the backend container
-run-testing:
+run-tests:
 	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit"
 
-# Run unit tests in the backend container
-run-unit-testing:
-	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit tests/Repository/HousesRepositoryTest.php"
-	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit tests/Repository/BookingsRepositoryTest.php"
-
-# Run integration tests in the backend container
-run-integration-testing:
-	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit tests/Controller/BookingsControllerTest.php"
-	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit tests/Controller/HousesControllerTest.php"
+add-dependency:
+	@bash -c 'read -p "Enter the dependency name: " dep_name && \
+	echo "Installing dependency: $$dep_name" && \
+	$(DOCKER_COMPOSE) exec backend bash -c "composer require $$dep_name"'

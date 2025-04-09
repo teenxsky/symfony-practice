@@ -167,4 +167,32 @@ class House
 
         return $this;
     }
+
+    /**
+     * @return array{
+     *     id: int,
+     *     is_available: bool,
+     *     bedrooms_count: int,
+     *     price_per_night: float,
+     *     has_air_conditioning: bool,
+     *     has_wifi: bool,
+     *     has_kitchen: bool,
+     *     has_parking: bool,
+     *     has_sea_view: bool
+     * }
+     */
+    public function toArray(): array
+    {
+        return [
+            'id'                   => $this->getId(),
+            'is_available'         => $this->isAvailable(),
+            'bedrooms_count'       => $this->getBedroomsCount(),
+            'price_per_night'      => $this->getPricePerNight(),
+            'has_air_conditioning' => $this->hasAirConditioning(),
+            'has_wifi'             => $this->hasWifi(),
+            'has_kitchen'          => $this->hasKitchen(),
+            'has_parking'          => $this->hasParking(),
+            'has_sea_view'         => $this->hasSeaView(),
+        ];
+    }
 }
