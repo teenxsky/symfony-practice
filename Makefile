@@ -1,5 +1,6 @@
--include ./.env.dev.local
+-include ./.env.local
 DOCKER_COMPOSE = docker-compose -f ./.docker/docker-compose.yaml --env-file .env.local
+XDEBUG = $(DOCKER_COMPOSE) exec -u root backend php .docker/php/xdebug.php
 
 # Build the Docker images for the development environment
 build:
@@ -62,3 +63,19 @@ add-dependency:
 	@bash -c 'read -p "Enter the dependency name: " dep_name && \
 	echo "Installing dependency: $$dep_name" && \
 	$(DOCKER_COMPOSE) exec backend bash -c "composer require $$dep_name"'
+
+# Show Xdebug status
+xdebug-status:
+	$(XDEBUG) status
+
+# Enable Xdebug
+xdebug-enable:
+	$(XDEBUG) enable
+	$(DOCKER_COMPOSE) restart backend
+	$(XDEBUG) status
+
+# Disable Xdebug
+xdebug-disable:
+	$(XDEBUG) disable
+	$(DOCKER_COMPOSE) restart backend
+	$(XDEBUG) status

@@ -18,10 +18,10 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 #[Route('/api/v1/bookings', name: 'bookings_api')]
 class BookingsController extends AbstractController
 {
-    private BookingsRepository $bookingsRepository;
-    private HousesRepository $housesRepository;
-    private SerializerInterface $serializer;
     private ValidatorInterface $validator;
+    private SerializerInterface $serializer;
+    private HousesRepository $housesRepository;
+    private BookingsRepository $bookingsRepository;
 
     public function __construct(
         BookingsRepository $bookingsRepository,
@@ -29,10 +29,10 @@ class BookingsController extends AbstractController
         SerializerInterface $serializer,
         ValidatorInterface $validator
     ) {
-        $this->bookingsRepository = $bookingsRepository;
-        $this->housesRepository   = $housesRepository;
-        $this->serializer         = $serializer;
         $this->validator          = $validator;
+        $this->serializer         = $serializer;
+        $this->housesRepository   = $housesRepository;
+        $this->bookingsRepository = $bookingsRepository;
     }
 
     #[Route('/', name: 'bookings_list', methods: ['GET'])]
@@ -72,7 +72,7 @@ class BookingsController extends AbstractController
             );
         }
 
-        $bookedHouse = $this->housesRepository->findHouseById($booking->getHouseId());
+        $bookedHouse = $booking->getHouse();
         if (! $bookedHouse) {
             return new JsonResponse(
                 ['status' => 'House not found'],
@@ -130,8 +130,20 @@ class BookingsController extends AbstractController
                 Response::HTTP_NOT_FOUND
             );
         }
-        $replacingBooking->setId($id);
+        if (! $replacingBooking->getHouse()) {
+            return new JsonResponse(
+                ['status' => 'House not found'],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+        if (! $replacingBooking->getHouse()->isAvailable()) {
+            return new JsonResponse(
+                ['status' => 'House is not available'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
 
+        $replacingBooking->setId($id);
         $errs = $this->validateBooking($replacingBooking);
         if (! empty($errs)) {
             return new JsonResponse(
@@ -143,9 +155,9 @@ class BookingsController extends AbstractController
             );
         }
 
-        if ($existingBooking->getHouseId() !== $replacingBooking->getHouseId()) {
-            $newBookingHouse = $this->housesRepository->findHouseById($replacingBooking->getHouseId());
-            $oldBookingHouse = $this->housesRepository->findHouseById($existingBooking->getHouseId());
+        if ($existingBooking->getHouse()->getId() !== $replacingBooking->getHouse()->getId()) {
+            $newBookingHouse = $replacingBooking->getHouse();
+            $oldBookingHouse = $existingBooking->getHouse();
 
             if (! $newBookingHouse) {
                 return new JsonResponse(
@@ -197,10 +209,10 @@ class BookingsController extends AbstractController
             ->setPhoneNumber($updatedBooking->getPhoneNumber() ?? $existingBooking->getPhoneNumber())
             ->setComment($updatedBooking->getComment() ?? $existingBooking->getComment());
 
-        if ($updatedBooking->getHouseId()) {
-            if ($existingBooking->getHouseId() !== $updatedBooking->getHouseId()) {
-                $newBookingHouse = $this->housesRepository->findHouseById($updatedBooking->getHouseId());
-                $oldBookingHouse = $this->housesRepository->findHouseById($existingBooking->getHouseId());
+        if ($updatedBooking->getHouse()) {
+            if ($existingBooking->getHouse()->getId() !== $updatedBooking->getHouse()->getId()) {
+                $newBookingHouse = $updatedBooking->getHouse();
+                $oldBookingHouse = $existingBooking->getHouse();
 
                 if (! $newBookingHouse) {
                     return new JsonResponse(
@@ -220,7 +232,7 @@ class BookingsController extends AbstractController
                 $newBookingHouse->setIsAvailable(false);
                 $this->housesRepository->updateHouse($newBookingHouse);
             }
-            $existingBooking->setHouseId($updatedBooking->getHouseId());
+            $existingBooking->setHouse($updatedBooking->getHouse());
         }
 
         $errs = $this->validateBooking($existingBooking);
@@ -251,11 +263,11 @@ class BookingsController extends AbstractController
             );
         }
 
-        $bookedHouse = $this->housesRepository->findHouseById($booking->getHouseId());
+        $bookedHouse = $booking->getHouse();
         $bookedHouse->setIsAvailable(true);
         $this->housesRepository->updateHouse($bookedHouse);
 
-        $this->bookingsRepository->deleteBooking($id);
+        $this->bookingsRepository->deleteBookingById($id);
         return new JsonResponse(
             ['status' => 'Booking deleted!'],
             Response::HTTP_OK
@@ -269,11 +281,22 @@ class BookingsController extends AbstractController
         }
 
         try {
-            return $this->serializer->deserialize(
-                $request->getContent(),
+            $data = json_decode($request->getContent(), true);
+
+            $house = null;
+            if (isset($data['houseId'])) {
+                $house = $this->housesRepository->findHouseById((int) $data['houseId']);
+                unset($data['houseId']);
+            }
+
+            $booking = $this->serializer->deserialize(
+                json_encode($data),
                 Booking::class,
                 'json'
             );
+            $booking->setHouse($house);
+
+            return $booking;
         } catch (NotEncodableValueException | UnexpectedValueException $e) {
             throw new DeserializeContentException($e->getMessage());
         }

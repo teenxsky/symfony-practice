@@ -102,12 +102,14 @@ class HousesController extends AbstractController
             );
         }
 
-        if (! $this->housesRepository->findHouseById($id)) {
+        $existingHouse = $this->housesRepository->findHouseById($id);
+        if (! $existingHouse) {
             return new JsonResponse(
                 ['status' => 'House not found'],
                 Response::HTTP_NOT_FOUND
             );
         }
+
         $replacingHouse->setId($id);
 
         $errs = $this->validateHouse($replacingHouse);
@@ -120,8 +122,8 @@ class HousesController extends AbstractController
                 Response::HTTP_BAD_REQUEST
             );
         }
-
         $this->housesRepository->updateHouse($replacingHouse);
+
         return new JsonResponse(
             ['status' => 'House replaced!'],
             Response::HTTP_OK

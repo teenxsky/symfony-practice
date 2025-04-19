@@ -2,120 +2,79 @@
 namespace App\Repository;
 
 use App\Entity\Booking;
+use App\Entity\House;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
 
-class BookingsRepository
+class BookingsRepository extends ServiceEntityRepository
 {
-    private string $filePath;
-
-    private const HEADERS = [
-        'id',
-        'phone_number',
-        'house_id',
-        'comment',
-    ];
-
-    public function __construct(string $filePath)
+    public function __construct(ManagerRegistry $registry)
     {
-        $this->filePath = $filePath;
-
-        if (! file_exists($this->filePath)) {
-            $handle = fopen($this->filePath, 'w');
-            fputcsv($handle, self::HEADERS);
-            fclose($handle);
-        }
+        parent::__construct($registry, Booking::class);
     }
 
     public function findAllBookings(): array
     {
-        $bookings = [];
-        if (($handle = fopen($this->filePath, 'r')) !== false) {
-            fgetcsv($handle, 1000, ',');
-            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                $booking = (new Booking())
-                    ->setId((int) $data[0])
-                    ->setPhoneNumber((string) $data[1])
-                    ->setHouseId((int) $data[2])
-                    ->setComment((string) $data[3]);
-
-                $bookings[] = $booking;
-            }
-            fclose($handle);
-        }
-        return $bookings;
+        return $this->createQueryBuilder('h')
+            ->orderBy('h.id', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 
     public function findBookingById(int $id): ?Booking
     {
-        $bookings = $this->findAllBookings();
-        foreach ($bookings as $booking) {
-            if ($booking->getId() == $id) {
-                return $booking;
-            }
-        }
-        return null;
+        return $this->find($id);
     }
 
     public function addBooking(Booking $booking): void
     {
-        $id       = 1;
-        $bookings = $this->findAllBookings();
-        if (! empty($bookings)) {
-            $lastBooking = end($bookings);
-            $id          = (int) $lastBooking->getId() + 1;
-        }
-
-        $booking->setId($id);
-
-        $this->saveBookings([$booking], 'a');
+        $entityManager = $this->getEntityManager();
+        $entityManager->persist($booking);
+        $entityManager->flush();
     }
 
-    public function updateBooking(Booking $booking): void
+    public function updateBooking(Booking $updatedBooking): void
     {
-        $bookings = $this->findAllBookings();
-        foreach ($bookings as &$existingBooking) {
-            if ($existingBooking->getId() == $booking->getId()) {
-                $existingBooking = $booking;
-                break;
+        $entityManager = $this->getEntityManager();
+        $booking       = $this->find($updatedBooking->getId());
+        if ($booking) {
+            ($booking)
+                ->setPhoneNumber($updatedBooking->getPhoneNumber())
+                ->setComment($updatedBooking->getComment())
+                ->setHouse($updatedBooking->getHouse());
+
+            $entityManager->flush();
+        }
+    }
+
+    public function deleteBookingById(int $id): void
+    {
+        $entityManager = $this->getEntityManager();
+        $booking       = $this->find($id);
+
+        if ($booking) {
+            $entityManager->remove($booking);
+            $entityManager->flush();
+        }
+    }
+
+    public function loadFromCsv(string $filePath): void
+    {
+        if (($handle = fopen($filePath, 'r')) !== false) {
+            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                $house = $this->getEntityManager()
+                    ->getRepository(House::class)
+                    ->find((int) $data[2]);
+
+                $booking = (new Booking())
+                    ->setId((int) $data[0])
+                    ->setPhoneNumber((string) $data[1])
+                    ->setHouse($house)
+                    ->setComment((string) $data[3]);
+
+                $this->addBooking($booking);
             }
+            fclose($handle);
         }
-
-        $this->saveBookings($bookings, 'w');
-    }
-
-    public function deleteBooking(int $id): void
-    {
-        $bookings = $this->findAllBookings();
-        foreach ($bookings as $key => $booking) {
-            if ($booking->getId() == $id) {
-                unset($bookings[$key]);
-                break;
-            }
-        }
-
-        $this->saveBookings($bookings, 'w');
-    }
-
-    private function saveBookings(array $bookings, string $mode): void
-    {
-        if (! in_array($mode, ['w', 'a'])) {
-            throw new \InvalidArgumentException('Invalid mode. Use "w" or "a".');
-        }
-
-        $handle = fopen($this->filePath, $mode);
-
-        if ($mode === 'w') {
-            fputcsv($handle, self::HEADERS);
-        }
-
-        foreach ($bookings as $booking) {
-            $houseData = [
-                $booking->getId(),
-                $booking->getPhoneNumber(),
-                $booking->getHouseId(),
-                $booking->getComment(),
-            ];
-            fputcsv($handle, $houseData);
-        }
-        fclose($handle);
     }
 }

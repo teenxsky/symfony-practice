@@ -17,15 +17,9 @@ RUN docker-php-ext-install \
     pdo_pgsql \
     pgsql
 
-COPY ./.docker/php/xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-
 RUN apk add --no-cache autoconf g++ make linux-headers musl-dev \
     && pecl install igbinary xdebug-3.4.1 \
     && docker-php-ext-enable xdebug
-
-# RUN rm -rf /var/cache/apk/* \
-#     && rm /bin/sh \
-#     && ln -s /bin/bash /bin/sh
 
 COPY . .
 

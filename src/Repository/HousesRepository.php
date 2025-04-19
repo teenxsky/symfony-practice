@@ -2,135 +2,85 @@
 namespace App\Repository;
 
 use App\Entity\House;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
 
-class HousesRepository
+class HousesRepository extends ServiceEntityRepository
 {
-    private string $filePath;
 
-    private const HEADERS = [
-        'id',
-        'is_available',
-        'bedrooms_count',
-        'price_per_night',
-        'has_air_conditioning',
-        'has_wifi',
-        'has_kitchen',
-        'has_parking',
-        'has_sea_view',
-    ];
-
-    public function __construct(string $filePath)
+    public function __construct(ManagerRegistry $registry)
     {
-        $this->filePath = $filePath;
-
-        if (! file_exists($this->filePath)) {
-            $handle = fopen($this->filePath, 'w');
-            fputcsv($handle, self::HEADERS);
-            fclose($handle);
-        }
+        parent::__construct($registry, House::class);
     }
 
     public function findAllHouses(): array
     {
-        $houses = [];
-        if (($handle = fopen($this->filePath, 'r')) !== false) {
-            fgetcsv($handle, 1000, ',');
-            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                $house = (new House())
-                    ->setId((int) $data[0])
-                    ->setIsAvailable(filter_var($data[1], FILTER_VALIDATE_BOOLEAN))
-                    ->setBedroomsCount((int) $data[2])
-                    ->setPricePerNight((int) $data[3])
-                    ->setHasAirConditioning(filter_var($data[4], FILTER_VALIDATE_BOOLEAN))
-                    ->setHasWifi(filter_var($data[5], FILTER_VALIDATE_BOOLEAN))
-                    ->setHasKitchen(filter_var($data[6], FILTER_VALIDATE_BOOLEAN))
-                    ->setHasParking(filter_var($data[7], FILTER_VALIDATE_BOOLEAN))
-                    ->setHasSeaView(filter_var($data[8], FILTER_VALIDATE_BOOLEAN));
-
-                $houses[] = $house;
-            }
-            fclose($handle);
-        }
-        return $houses;
+        return $this->createQueryBuilder('h')
+            ->orderBy('h.id', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 
     public function findHouseById(int $id): ?House
     {
-        $houses = $this->findAllHouses();
-        foreach ($houses as $house) {
-            if ($house->getId() == $id) {
-                return $house;
-            }
-        }
-        return null;
+        return $this->find($id);
     }
 
     public function addHouse(House $house): void
     {
-        $id     = 1;
-        $houses = $this->findAllHouses();
-        if (! empty($houses)) {
-            $lastHouse = end($houses);
-            $id        = (int) $lastHouse->getId() + 1;
-        }
-
-        $house->setId($id);
-
-        $this->saveHouses([$house], 'a');
+        $entityManager = $this->getEntityManager();
+        $entityManager->persist($house);
+        $entityManager->flush();
     }
 
-    public function updateHouse(House $house): void
+    public function updateHouse(House $updatedHouse): void
     {
-        $houses = $this->findAllHouses();
-        foreach ($houses as &$existingHouse) {
-            if ($existingHouse->getId() == $house->getId()) {
-                $existingHouse = $house;
-                break;
-            }
-        }
+        $entityManager = $this->getEntityManager();
+        $house         = $this->find($updatedHouse->getId());
+        if ($house) {
+            ($house)
+                ->setIsAvailable($updatedHouse->isAvailable())
+                ->setBedroomsCount($updatedHouse->getBedroomsCount())
+                ->setPricePerNight($updatedHouse->getPricePerNight())
+                ->setHasAirConditioning($updatedHouse->hasAirConditioning())
+                ->setHasWifi($updatedHouse->hasWifi())
+                ->setHasKitchen($updatedHouse->hasKitchen())
+                ->setHasParking($updatedHouse->hasParking())
+                ->setHasSeaView($updatedHouse->hasSeaView());
 
-        $this->saveHouses($houses, 'w');
+            $entityManager->flush();
+        }
     }
 
     public function deleteHouse(int $id): void
     {
-        $houses = $this->findAllHouses();
-        foreach ($houses as $key => $house) {
-            if ($house->getId() == $id) {
-                unset($houses[$key]);
-                break;
-            }
-        }
+        $entityManager = $this->getEntityManager();
+        $house         = $this->find($id);
 
-        $this->saveHouses($houses, 'w');
+        if ($house) {
+            $entityManager->remove($house);
+            $entityManager->flush();
+        }
     }
 
-    private function saveHouses(array $houses, string $mode): void
+    public function loadFromCsv(string $filePath): void
     {
-        if (! in_array($mode, ['w', 'a'])) {
-            throw new \InvalidArgumentException('Invalid mode. Use "w" or "a".');
-        }
+        if (($handle = fopen($filePath, 'r')) !== false) {
+            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                $house = (new House())
+                    ->setId((int) $data[0])
+                    ->setIsAvailable((bool) $data[1])
+                    ->setBedroomsCount((int) $data[2])
+                    ->setPricePerNight((int) $data[3])
+                    ->setHasAirConditioning((bool) $data[4])
+                    ->setHasWifi((bool) $data[5])
+                    ->setHasKitchen((bool) $data[6])
+                    ->setHasParking((bool) $data[7])
+                    ->setHasSeaView((bool) $data[8]);
 
-        $handle = fopen($this->filePath, $mode);
-
-        if ($mode === 'w') {
-            fputcsv($handle, self::HEADERS);
+                $this->addHouse($house);
+            }
+            fclose($handle);
         }
-
-        foreach ($houses as $house) {
-            $houseData = [
-                $house->getId(),
-                $house->isAvailable(),
-                $house->getBedroomsCount(),
-                $house->getPricePerNight(),
-                $house->hasAirConditioning(),
-                $house->hasWifi(),
-                $house->hasKitchen(),
-                $house->hasParking(),
-                $house->hasSeaView(),
-            ];
-            fputcsv($handle, $houseData);
-        }
-        fclose($handle);
     }
 }
