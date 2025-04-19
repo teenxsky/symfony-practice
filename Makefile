@@ -57,6 +57,7 @@ shell-backend:
 run-tests:
 	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit"
 
+# Add a new dependency to the backend container
 add-dependency:
 	@bash -c 'read -p "Enter the dependency name: " dep_name && \
 	echo "Installing dependency: $$dep_name" && \

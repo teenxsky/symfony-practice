@@ -1,5 +1,7 @@
 #!/bin/bash
 
+composer install --no-interaction --no-scripts
+
 if [ "$DATABASE"="postgres" ]
 then
     echo "Waiting for postgreSQL..."
