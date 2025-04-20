@@ -36,7 +36,9 @@ class HousesRepository extends ServiceEntityRepository
     public function updateHouse(House $updatedHouse): void
     {
         $entityManager = $this->getEntityManager();
-        $house         = $this->find($updatedHouse->getId());
+
+        /** @var House|null $house */
+        $house = $this->find($updatedHouse->getId());
         if ($house) {
             ($house)
                 ->setIsAvailable($updatedHouse->isAvailable())
@@ -65,22 +67,27 @@ class HousesRepository extends ServiceEntityRepository
 
     public function loadFromCsv(string $filePath): void
     {
-        if (($handle = fopen($filePath, 'r')) !== false) {
-            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                $house = (new House())
-                    ->setId((int) $data[0])
-                    ->setIsAvailable((bool) $data[1])
-                    ->setBedroomsCount((int) $data[2])
-                    ->setPricePerNight((int) $data[3])
-                    ->setHasAirConditioning((bool) $data[4])
-                    ->setHasWifi((bool) $data[5])
-                    ->setHasKitchen((bool) $data[6])
-                    ->setHasParking((bool) $data[7])
-                    ->setHasSeaView((bool) $data[8]);
-
-                $this->addHouse($house);
-            }
-            fclose($handle);
+        $csvFile = fopen($filePath, 'r');
+        if ($csvFile === false) {
+            throw new \RuntimeException("Unable to open the CSV file: $filePath");
         }
+
+        fgetcsv($csvFile, 0, ',', '"', '\\');
+
+        while (($data = fgetcsv($csvFile, 0, ',', '"', '\\')) !== false) {
+            $house = (new House())
+                ->setIsAvailable($data[1] === '1')
+                ->setBedroomsCount((int) $data[2])
+                ->setPricePerNight((int) $data[3])
+                ->setHasAirConditioning($data[4] === '1')
+                ->setHasWifi($data[5] === '1')
+                ->setHasKitchen($data[6] === '1')
+                ->setHasParking($data[7] === '1')
+                ->setHasSeaView($data[8] === '1');
+
+            $this->addHouse($house);
+        }
+
+        fclose($csvFile);
     }
 }

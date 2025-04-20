@@ -3,45 +3,35 @@ namespace App\Tests\Controller;
 
 use App\Entity\House;
 use App\Repository\HousesRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Component\Validator\ConstraintViolation;
-use Symfony\Component\Validator\ConstraintViolationList;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class HousesControllerTest extends WebTestCase
 {
-    private $client;
+    /** @var HousesRepository $repository */
+    private HousesRepository $housesRepository;
 
-    private $validator;
-    private $serializer;
-
-    private static $housesRepository;
-
-    public static function setUpBeforeClass(): void
-    {
-        self::initializeRepositories();
-    }
-
-    protected static function initializeRepositories()
-    {
-        copy(__DIR__ . '/../Resources/test_houses.csv', __DIR__ . '/../Resources/~$test_houses.csv');
-
-        self::$housesRepository = new HousesRepository(__DIR__ . '/../Resources/~$test_houses.csv');
-    }
+    private KernelBrowser $client;
+    private EntityManagerInterface $entityManager;
+    private string $housesCsvPath = __DIR__ . '/../Resources/test_houses.csv';
 
     protected function setUp(): void
     {
-        $this->serializer = $this->createMock(SerializerInterface::class);
-        $this->validator  = $this->createMock(ValidatorInterface::class);
-
         $this->client = static::createClient();
-        $container    = ($this->client->getContainer());
-        $container->set(HousesRepository::class, self::$housesRepository);
-        $container->set(SerializerInterface::class, $this->serializer);
-        $container->set(ValidatorInterface::class, $this->validator);
+
+        $this->entityManager    = static::getContainer()->get('doctrine')->getManager();
+        $this->housesRepository = $this->entityManager->getRepository(House::class);
+
+        $this->truncateEntities();
+        $this->housesRepository->loadFromCsv($this->housesCsvPath);
+    }
+
+    private function truncateEntities(): void
+    {
+        $connection = $this->entityManager->getConnection();
+        $connection->executeStatement('TRUNCATE TABLE house RESTART IDENTITY CASCADE');
     }
 
     public function testListHouses()
@@ -55,7 +45,7 @@ class HousesControllerTest extends WebTestCase
 
         $expectedData = array_map(
             fn($house) => $house->toArray(),
-            self::$housesRepository->findAllHouses()
+            $this->housesRepository->findAllHouses()
         );
 
         $this->assertEquals(
@@ -73,11 +63,23 @@ class HousesControllerTest extends WebTestCase
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertJson($response->getContent());
 
-        $expectedData = self::$housesRepository->findHouseById(1)->toArray();
+        $expectedData = $this->housesRepository->findHouseById(1)->toArray();
+
+        $decodedData = json_decode($response->getContent(), true);
+
+        $this->assertArrayHasKey('id', $decodedData);
+        $this->assertArrayHasKey('bedroomsCount', $decodedData);
+        $this->assertArrayHasKey('pricePerNight', $decodedData);
+        $this->assertArrayHasKey('hasAirConditioning', $decodedData);
+        $this->assertArrayHasKey('hasWifi', $decodedData);
+        $this->assertArrayHasKey('hasKitchen', $decodedData);
+        $this->assertArrayHasKey('hasParking', $decodedData);
+        $this->assertArrayHasKey('hasSeaView', $decodedData);
+        $this->assertArrayHasKey('isAvailable', $decodedData);
 
         $this->assertEquals(
-            json_encode($expectedData),
-            $response->getContent()
+            $expectedData,
+            $decodedData
         );
     }
 
@@ -106,18 +108,6 @@ class HousesControllerTest extends WebTestCase
             'has_sea_view'         => false,
         ];
 
-        $this->serializer
-            ->expects($this->once())
-            ->method('deserialize')
-            ->willReturn((new House())
-                    ->setBedroomsCount(12)
-                    ->setPricePerNight(6000)
-                    ->setHasAirConditioning(true)
-                    ->setHasWifi(true)
-                    ->setHasKitchen(true)
-                    ->setHasParking(true)
-                    ->setHasSeaView(false));
-
         $this->client->request(
             'POST',
             '/api/v1/houses/',
@@ -133,39 +123,21 @@ class HousesControllerTest extends WebTestCase
         $this->assertJson($response->getContent());
         $this->assertEquals(json_encode(['status' => 'House created!']), $response->getContent());
 
-        $addedHouse = self::$housesRepository->findHouseById(5);
+        $addedHouse = $this->housesRepository->findHouseById(5);
         $this->assertNotNull($addedHouse);
     }
 
     public function testAddHouseValidationError()
     {
-        $house = (new House())
-            ->setBedroomsCount(21)
-            ->setPricePerNight(6000)
-            ->setHasAirConditioning(true)
-            ->setHasWifi(true)
-            ->setHasKitchen(true)
-            ->setHasParking(true)
-            ->setHasSeaView(true);
-
-        $this->serializer
-            ->expects($this->once())
-            ->method('deserialize')
-            ->willReturn($house);
-
-        $this->validator
-            ->expects($this->once())
-            ->method('validate')
-            ->willReturn(new ConstraintViolationList([
-                new ConstraintViolation(
-                    'Invalid value',
-                    null,
-                    [],
-                    null,
-                    'bedroomsCount',
-                    21
-                ),
-            ]));
+        $house = [
+            'bedrooms_count'       => 21,
+            'price_per_night'      => 6000,
+            'has_air_conditioning' => true,
+            'has_wifi'             => true,
+            'has_kitchen'          => true,
+            'has_parking'          => true,
+            'has_sea_view'         => true,
+        ];
 
         $this->client->request(
             'POST',
@@ -173,7 +145,7 @@ class HousesControllerTest extends WebTestCase
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode($house)
+            json_encode($house),
         );
 
         $response = $this->client->getResponse();
@@ -186,7 +158,7 @@ class HousesControllerTest extends WebTestCase
                 'errors' => [
                     [
                         'field'   => 'bedroomsCount',
-                        'message' => 'Invalid value',
+                        'message' => 'This value should be between 1 and 20.',
                     ],
                 ],
             ]),
@@ -196,24 +168,20 @@ class HousesControllerTest extends WebTestCase
 
     public function testReplaceHouseSuccess()
     {
-        $house = (new House())
-            ->setId(1)
-            ->setIsAvailable(true)
-            ->setBedroomsCount(12)
-            ->setPricePerNight(7000)
-            ->setHasAirConditioning(true)
-            ->setHasWifi(false)
-            ->setHasKitchen(false)
-            ->setHasParking(true)
-            ->setHasSeaView(false);
+        $house = [
+            'id'                   => 1,
+            'is_available'         => true,
+            'bedrooms_count'       => 12,
+            'price_per_night'      => 7000,
+            'has_air_conditioning' => true,
+            'has_wifi'             => false,
+            'has_kitchen'          => false,
+            'has_parking'          => true,
+            'has_sea_view'         => false,
+        ];
 
-        $houseBeforeReplacing = self::$housesRepository->findHouseById(1);
+        $houseBeforeReplacing = $this->housesRepository->findHouseById(1);
         $this->assertFalse($houseBeforeReplacing->isAvailable());
-
-        $this->serializer
-            ->expects($this->once())
-            ->method('deserialize')
-            ->willReturn($house);
 
         $this->client->request(
             'PUT',
@@ -233,17 +201,12 @@ class HousesControllerTest extends WebTestCase
             $response->getContent()
         );
 
-        $houseAfterReplacing = self::$housesRepository->findHouseById(1);
+        $houseAfterReplacing = $this->housesRepository->findHouseById(1);
         $this->assertTrue($houseAfterReplacing->isAvailable());
     }
 
     public function testReplaceHouseNotFound()
     {
-        $this->serializer
-            ->expects($this->once())
-            ->method('deserialize')
-            ->willReturn(new House());
-
         $this->client->request(
             'PUT',
             '/api/v1/houses/999',
@@ -269,17 +232,8 @@ class HousesControllerTest extends WebTestCase
             'bedrooms_count' => 19,
         ];
 
-        $houseBeforeReplacing = self::$housesRepository->findHouseById(2);
+        $houseBeforeReplacing = $this->housesRepository->findHouseById(2);
         $this->assertEquals(3, $houseBeforeReplacing->getBedroomsCount());
-
-        $this->serializer
-            ->expects($this->once())
-            ->method('deserialize')
-            ->willReturn(
-                (new House())
-                    ->setIsAvailable(false)
-                    ->setBedroomsCount(19)
-            );
 
         $this->client->request(
             'PATCH',
@@ -299,17 +253,12 @@ class HousesControllerTest extends WebTestCase
             $response->getContent()
         );
 
-        $houseAfterReplacing = self::$housesRepository->findHouseById(2);
+        $houseAfterReplacing = $this->housesRepository->findHouseById(2);
         $this->assertEquals(19, $houseAfterReplacing->getBedroomsCount());
     }
 
     public function testUpdateHouseNotFound()
     {
-        $this->serializer
-            ->expects($this->once())
-            ->method('deserialize')
-            ->willReturn(new House());
-
         $this->client->request(
             'PATCH',
             '/api/v1/houses/999',
@@ -330,7 +279,7 @@ class HousesControllerTest extends WebTestCase
 
     public function testDeleteHouseSuccess()
     {
-        $this->client->request('DELETE', '/api/v1/houses/1');
+        $this->client->request('DELETE', '/api/v1/houses/3');
 
         $response = $this->client->getResponse();
 
@@ -341,7 +290,7 @@ class HousesControllerTest extends WebTestCase
             $response->getContent()
         );
 
-        $deletedHouse = self::$housesRepository->findHouseById(1);
+        $deletedHouse = $this->housesRepository->findHouseById(3);
         $this->assertNull($deletedHouse);
     }
 

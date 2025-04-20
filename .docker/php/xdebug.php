@@ -2,15 +2,16 @@
 
 declare (strict_types = 1);
 
-$configPath = '/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini';
+$targetConfigPath = '/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini';
+$sourceConfigPath = __DIR__ . '/xdebug.ini';
 
 $command = $argv[1];
 if ($command === 'enable') {
-    copy(__DIR__ . '/xdebug.ini', $configPath);
+    copy($sourceConfigPath, $targetConfigPath);
 } elseif ($command === 'disable') {
-    @unlink($configPath);
+    @unlink($targetConfigPath);
 } elseif ($command === 'status') {
-    $enabled          = in_array('xdebug', get_loaded_extensions(), true);
+    $enabled          = file_exists($targetConfigPath);
     [$status, $color] = $enabled ? ['enabled', "\e[32m"] : ['disabled', "\e[31m"];
     echo "{$color}Xdebug is {$status}\e[0m\n";
 } else {

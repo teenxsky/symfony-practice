@@ -2,144 +2,106 @@
 namespace App\Tests\Repository;
 
 use App\Entity\Booking;
+use App\Entity\House;
 use App\Repository\BookingsRepository;
-use PHPUnit\Framework\TestCase;
-use ReflectionClass;
+use App\Repository\HousesRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-class BookingsRepositoryTest extends TestCase
+class BookingsRepositoryTest extends KernelTestCase
 {
-    private $filePath = __DIR__ . '/../Resources/~$test_bookings.csv';
-    private $bookings = [];
+    /** @var HousesRepository $housesRepository */
+    private HousesRepository $housesRepository;
+    /** @var BookingsRepository $bookingsRepository */
+    private BookingsRepository $bookingsRepository;
+
+    private EntityManagerInterface $entityManager;
+    private string $housesCsvPath   = __DIR__ . '/../Resources/test_houses.csv';
+    private string $bookingsCsvPath = __DIR__ . '/../Resources/test_bookings.csv';
 
     protected function setUp(): void
     {
-        if (file_exists($this->filePath)) {
-            unlink($this->filePath);
-        }
+        $kernel = self::bootKernel();
+        $this->assertSame('test', $kernel->getEnvironment());
 
-        $this->bookings[] = (new Booking())
-            ->setHouseId(1)
-            ->setPhoneNumber("+1234567890")
-            ->setComment('Test comment 1');
+        $this->entityManager      = static::getContainer()->get('doctrine')->getManager();
+        $this->bookingsRepository = $this->entityManager->getRepository(Booking::class);
+        $this->housesRepository   = $this->entityManager->getRepository(House::class);
 
-        $this->bookings[] = (new Booking())
-            ->setHouseId(2)
-            ->setPhoneNumber("+0987654321");
+        $this->truncateEntities();
 
-        $this->bookings[] = (new Booking())
-            ->setHouseId(3)
-            ->setPhoneNumber("+1122334455")
-            ->setComment('Test comment 3');
+        $this->housesRepository->loadFromCsv($this->housesCsvPath);
+        $this->bookingsRepository->loadFromCsv($this->bookingsCsvPath);
     }
 
-    protected function tearDown(): void
+    private function truncateEntities(): void
     {
-        if (file_exists($this->filePath)) {
-            unlink($this->filePath);
-        }
-
-        $this->bookings = [];
+        $connection = $this->entityManager->getConnection();
+        $connection->executeStatement('TRUNCATE TABLE booking RESTART IDENTITY CASCADE');
+        $connection->executeStatement('TRUNCATE TABLE house RESTART IDENTITY CASCADE');
     }
 
     public function testFindAllBookings()
     {
-        $repository = new BookingsRepository($this->filePath);
+        $bookings = $this->bookingsRepository->findAllBookings();
 
-        $bookings = $repository->findAllBookings();
-        $this->assertCount(0, $bookings);
-
-        foreach ($this->bookings as $booking) {
-            $repository->addBooking($booking);
-        }
-
-        $bookings = $repository->findAllBookings();
-        $this->assertCount(3, $bookings);
+        $this->assertCount(2, $bookings);
+        $this->assertEquals('+1234567890', $bookings[0]->getPhoneNumber());
+        $this->assertEquals('Test booking 1', $bookings[0]->getComment());
+        $this->assertEquals('+1987654321', $bookings[1]->getPhoneNumber());
+        $this->assertEquals('Test booking 2', $bookings[1]->getComment());
     }
 
     public function testFindBookingById()
     {
-        $repository = new BookingsRepository($this->filePath);
-        foreach ($this->bookings as $booking) {
-            $repository->addBooking($booking);
-        }
+        $booking = $this->bookingsRepository->findBookingById(1);
 
-        $booking = $repository->findBookingById(2);
         $this->assertNotNull($booking);
-        $this->assertEquals(2, $booking->getId());
-        $this->assertEquals(2, $booking->getHouseId());
-        $this->assertEquals("+0987654321", $booking->getPhoneNumber());
-        $this->assertEquals("", $booking->getComment());
-
-        $notFoundBooking = $repository->findBookingById(999);
+        $this->assertEquals(1, $booking->getId());
+        $this->assertEquals('+1234567890', $booking->getPhoneNumber());
+        $this->assertEquals('Test booking 1', $booking->getComment());
     }
 
     public function testAddBooking()
     {
-        $repository = new BookingsRepository($this->filePath);
-        $repository->addBooking($this->bookings[0]);
+        $house = $this->housesRepository->find(1);
+        $this->assertNotNull($house);
 
-        $bookings = $repository->findAllBookings();
-        $this->assertCount(1, $bookings);
-        $this->assertEquals(1, $bookings[0]->getId());
-        $this->assertEquals(1, $bookings[0]->getHouseId());
-        $this->assertEquals("+1234567890", $bookings[0]->getPhoneNumber());
-        $this->assertEquals("Test comment 1", $bookings[0]->getComment());
+        $newBooking = (new Booking())
+            ->setPhoneNumber('+1122334455')
+            ->setComment('New test booking')
+            ->setHouse($house);
+
+        $this->bookingsRepository->addBooking($newBooking);
+
+        $bookings = $this->bookingsRepository->findAllBookings();
+        $this->assertCount(3, $bookings);
+        $this->assertEquals('+1122334455', $bookings[2]->getPhoneNumber());
+        $this->assertEquals('New test booking', $bookings[2]->getComment());
     }
 
     public function testUpdateBooking()
     {
-        $repository = new BookingsRepository($this->filePath);
+        $booking = $this->bookingsRepository->findBookingById(1);
+        $this->assertNotNull($booking);
 
-        $booking = $this->bookings[2];
-        $repository->addBooking($booking);
+        $booking->setPhoneNumber('+9988776655');
+        $booking->setComment('Updated booking comment');
+        $this->bookingsRepository->updateBooking($booking);
 
-        $uploadedBooking = $repository->findBookingById(1);
-        $this->assertNotNull($uploadedBooking);
-        $this->assertEquals(3, $uploadedBooking->getHouseId());
-        $this->assertEquals("+1122334455", $uploadedBooking->getPhoneNumber());
-        $this->assertEquals("Test comment 3", $uploadedBooking->getComment());
-
-        $booking->setPhoneNumber("+5555555555");
-        $booking->setHouseId(1);
-        $booking->setComment("Test comment 1");
-        $repository->updateBooking($booking);
-
-        $updatedBooking = $repository->findBookingById(1);
-        $this->assertNotNull($updatedBooking);
-        $this->assertEquals(1, $updatedBooking->getHouseId());
-        $this->assertEquals("+5555555555", $updatedBooking->getPhoneNumber());
-        $this->assertEquals("Test comment 1", $updatedBooking->getComment());
+        $updatedBooking = $this->bookingsRepository->findBookingById(1);
+        $this->assertEquals('+9988776655', $updatedBooking->getPhoneNumber());
+        $this->assertEquals('Updated booking comment', $updatedBooking->getComment());
     }
 
     public function testDeleteBooking()
     {
-        $repository = new BookingsRepository($this->filePath);
+        $this->bookingsRepository->deleteBookingById(1);
 
-        foreach ($this->bookings as $booking) {
-            $repository->addBooking($booking);
-        }
+        $bookings = $this->bookingsRepository->findAllBookings();
+        $this->assertCount(1, $bookings);
 
-        $bookings = $repository->findAllBookings();
-        $this->assertCount(3, $bookings);
-        $this->assertEquals(1, $bookings[0]->getId());
-        $this->assertEquals(2, $bookings[1]->getId());
-        $this->assertEquals(3, $bookings[2]->getId());
-
-        $repository->deleteBooking(2);
-
-        $bookings = $repository->findAllBookings();
-        $this->assertCount(2, $bookings);
-        $this->assertEquals(1, $bookings[0]->getId());
-        $this->assertNotEquals(2, $bookings[1]->getId());
-        $this->assertEquals(3, $bookings[1]->getId());
-    }
-
-    public function testSaveBookingsPrivate()
-    {
-        $repository = new BookingsRepository($this->filePath);
-
-        $reflection = new ReflectionClass($repository);
-        $method = $reflection->getMethod('saveBookings');
-        $this->assertTrue($method->isPrivate());
+        $deletedBooking = $this->bookingsRepository->findBookingById(1);
+        $this->assertNull($deletedBooking);
     }
 }

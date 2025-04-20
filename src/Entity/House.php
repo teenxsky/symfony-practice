@@ -6,6 +6,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Ignore;
 use Symfony\Component\Validator\Constraints as Assert;
+use App\Repository\HousesRepository;
 
 #[ORM\Entity(repositoryClass: HousesRepository::class)]
 class House

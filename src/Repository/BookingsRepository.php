@@ -36,7 +36,9 @@ class BookingsRepository extends ServiceEntityRepository
     public function updateBooking(Booking $updatedBooking): void
     {
         $entityManager = $this->getEntityManager();
-        $booking       = $this->find($updatedBooking->getId());
+
+        /** @var Booking|null $booking */
+        $booking = $this->find($updatedBooking->getId());
         if ($booking) {
             ($booking)
                 ->setPhoneNumber($updatedBooking->getPhoneNumber())
@@ -60,21 +62,31 @@ class BookingsRepository extends ServiceEntityRepository
 
     public function loadFromCsv(string $filePath): void
     {
-        if (($handle = fopen($filePath, 'r')) !== false) {
-            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                $house = $this->getEntityManager()
-                    ->getRepository(House::class)
-                    ->find((int) $data[2]);
-
-                $booking = (new Booking())
-                    ->setId((int) $data[0])
-                    ->setPhoneNumber((string) $data[1])
-                    ->setHouse($house)
-                    ->setComment((string) $data[3]);
-
-                $this->addBooking($booking);
-            }
-            fclose($handle);
+        $csvFile = fopen($filePath, 'r');
+        if ($csvFile === false) {
+            throw new \RuntimeException("Unable to open the CSV file: $filePath");
         }
+
+        fgetcsv($csvFile, 0, ',', '"', '\\');
+
+        while (($data = fgetcsv($csvFile, 0, ',', '"', '\\')) !== false) {
+            $house = $this->getEntityManager()
+                ->getRepository(House::class)
+                ->find((int) $data[2]);
+
+            if ($house === null) {
+                continue;
+            }
+
+            $booking = (new Booking())
+                ->setId((int) $data[0])
+                ->setPhoneNumber((string) $data[1])
+                ->setHouse($house)
+                ->setComment((string) $data[3]);
+
+            $this->addBooking($booking);
+        }
+
+        fclose($csvFile);
     }
 }

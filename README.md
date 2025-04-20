@@ -20,34 +20,65 @@ cp .env.dev .env.dev.local
 cp .env.test .env.test.local
 ```
 
-### Run API testing
-- To run unit and integration testing, run the following command: 
+---
 
-```bash
-make run-testing
-```
+### Testing Guide
 
-- To run only unit testing, run the following command: 
+To run tests, follow these steps:
 
-```bash
-make run-unit-testing
-```
+1. **Create the test database**:
+   Run the following command to create a test database:
 
-- To run only integration testing, run the following command: 
+   ```bash
+   make create-test-db
+   ```
 
-```bash
-make run-integration-testing
-```
+2. **Generate migrations (if not already created)**:
+   If migrations are not created, generate them using:
 
-### Building the Docker Images
+   ```bash
+   make make-migrations
+   ```
 
-To build the Docker images for the development environment, run the following command:
+3. **Apply migrations to the test database**:
+   Apply the migrations to the test database using:
+
+   ```bash
+   make migrate-test-db
+   ```
+
+4. **Run the tests**:
+   Finally, run all tests using:
+
+   ```bash
+   make run-tests
+   ```
+
+   To run only repository tests:
+
+   ```bash
+   make run-tests-repository
+   ```
+
+   To run only controller tests:
+
+   ```bash
+   make run-tests-controller
+   ```
+
+---
+
+### Docker Commands
+
+#### Build the Docker Images
+
+To build the Docker images for the development environment, run:
 
 ```bash
 make build
 ```
 
-### Starting the Services
+#### Start the Services
 
 To start the services in detached mode (running in the background), use:
 
@@ -61,7 +92,7 @@ If you want to start the services and see the logs in real-time, use:
 make up-logs
 ```
 
-### Stopping the Services
+#### Stop the Services
 
 To stop the services, run:
 
@@ -69,7 +100,7 @@ To stop the services, run:
 make down
 ```
 
-### Cleaning Up
+#### Clean Up
 
 To stop and remove all containers, networks, volumes, and images, use:
 
@@ -83,7 +114,11 @@ To stop and remove all volumes, use:
 make clean-volumes
 ```
 
-### Database Migrations
+---
+
+### Database Commands
+
+#### Create a New Migration
 
 To create a new migration file in the backend container, run:
 
@@ -91,19 +126,23 @@ To create a new migration file in the backend container, run:
 make make-migrations
 ```
 
+#### Apply Migrations to the Database
+
 To execute the Doctrine migrations in the backend container, use:
 
 ```bash
-make migrate
+make migrate-db
 ```
 
-### Database Backup
+#### Create a Database Backup
 
-To create a database backup (dumb.sql), run:
+To create a database backup (dump.sql), run:
 
 ```bash
-make make-dumb
+make create-dump
 ```
+
+---
 
 ### Accessing the Backend Container Shell
 
@@ -111,4 +150,32 @@ To open a shell in the backend container, use:
 
 ```bash
 make shell-backend
+```
+
+---
+
+### Debugging with Xdebug
+
+#### Show Xdebug Status
+
+To check the current status of Xdebug, run:
+
+```bash
+make xdebug-status
+```
+
+#### Enable Xdebug
+
+To enable Xdebug, run:
+
+```bash
+make xdebug-enable
+```
+
+#### Disable Xdebug
+
+To disable Xdebug, run:
+
+```bash
+make xdebug-disable
 ```
