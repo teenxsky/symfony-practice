@@ -2,9 +2,9 @@
 namespace App\Entity;
 
 use App\Entity\House;
+use App\Repository\BookingsRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
-use App\Repository\BookingsRepository;
 
 #[ORM\Entity(repositoryClass: BookingsRepository::class)]
 class Booking
@@ -91,13 +91,21 @@ class Booking
         return $this;
     }
 
+    /**
+     * @return array{
+     *     id: int,
+     *     phone_number: string,
+     *     house_id: int,
+     *     comment: string|null,
+     * }
+     */
     public function toArray(): array
     {
         return [
-            'id'          => $this->getId(),
-            'phoneNumber' => $this->getPhoneNumber(),
-            'comment'     => $this->getComment(),
-            'house'       => $this->getHouse()->toArray(),
+            'id'           => $this->getId(),
+            'phone_number' => $this->getPhoneNumber(),
+            'house_id'     => $this->getHouse()->getId(),
+            'comment'      => $this->getComment(),
         ];
     }
 }

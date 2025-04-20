@@ -7,12 +7,34 @@ use Doctrine\Persistence\ManagerRegistry;
 
 class HousesRepository extends ServiceEntityRepository
 {
+    private const HOUSE_FIELDS = [
+        'id',
+        'is_available',
+        'bedrooms_count',
+        'price_per_night',
+        'has_air_conditioning',
+        'has_wifi',
+        'has_kitchen',
+        'has_parking',
+        'has_sea_view',
+    ];
 
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, House::class);
     }
 
+    /**
+     * @return string[]
+     */
+    public function getFields(): array
+    {
+        return self::HOUSE_FIELDS;
+    }
+
+    /**
+     * @return House[]
+     */
     public function findAllHouses(): array
     {
         return $this->createQueryBuilder('h')
@@ -54,7 +76,7 @@ class HousesRepository extends ServiceEntityRepository
         }
     }
 
-    public function deleteHouse(int $id): void
+    public function deleteHouseById(int $id): void
     {
         $entityManager = $this->getEntityManager();
         $house         = $this->find($id);
@@ -67,27 +89,48 @@ class HousesRepository extends ServiceEntityRepository
 
     public function loadFromCsv(string $filePath): void
     {
-        $csvFile = fopen($filePath, 'r');
-        if ($csvFile === false) {
+        $handle = fopen($filePath, 'r');
+        if (! $handle) {
             throw new \RuntimeException("Unable to open the CSV file: $filePath");
         }
 
-        fgetcsv($csvFile, 0, ',', '"', '\\');
+        fgetcsv($handle, 0, ',', '"', '\\');
 
-        while (($data = fgetcsv($csvFile, 0, ',', '"', '\\')) !== false) {
+        while ($data = fgetcsv($handle, 0, ',', '"', '\\')) {
+            $row = array_combine(
+                keys: self::HOUSE_FIELDS,
+                values: $data
+            );
+
             $house = (new House())
-                ->setIsAvailable($data[1] === '1')
-                ->setBedroomsCount((int) $data[2])
-                ->setPricePerNight((int) $data[3])
-                ->setHasAirConditioning($data[4] === '1')
-                ->setHasWifi($data[5] === '1')
-                ->setHasKitchen($data[6] === '1')
-                ->setHasParking($data[7] === '1')
-                ->setHasSeaView($data[8] === '1');
+                ->setIsAvailable(
+                    (bool) $row['is_available']
+                )
+                ->setBedroomsCount(
+                    (int) $row['bedrooms_count']
+                )
+                ->setPricePerNight(
+                    (int) $row['price_per_night']
+                )
+                ->setHasAirConditioning(
+                    (bool) $row['has_air_conditioning']
+                )
+                ->setHasWifi(
+                    (bool) $row['has_wifi']
+                )
+                ->setHasKitchen(
+                    (bool) $row['has_kitchen']
+                )
+                ->setHasParking(
+                    (bool) $row['has_parking']
+                )
+                ->setHasSeaView(
+                    (bool) $row['has_sea_view']
+                );
 
             $this->addHouse($house);
         }
 
-        fclose($csvFile);
+        fclose($handle);
     }
 }

@@ -179,3 +179,15 @@ To disable Xdebug, run:
 ```bash
 make xdebug-disable
 ```
+
+---
+
+### Help Command
+
+To see a list of all available `make` commands with descriptions, run:
+
+```bash
+make help
+```
+
+This will display a categorized list of commands, including Docker Compose commands, database commands, Symfony commands, testing commands, and debugging commands.

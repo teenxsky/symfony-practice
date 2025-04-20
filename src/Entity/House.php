@@ -1,12 +1,12 @@
 <?php
 namespace App\Entity;
 
+use App\Repository\HousesRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Ignore;
 use Symfony\Component\Validator\Constraints as Assert;
-use App\Repository\HousesRepository;
 
 #[ORM\Entity(repositoryClass: HousesRepository::class)]
 class House
@@ -206,18 +206,31 @@ class House
         return $this;
     }
 
+    /**
+     * @return array{
+     *     id: int,
+     *     is_available: bool,
+     *     bedrooms_count: int,
+     *     price_per_night: float,
+     *     has_air_conditioning: bool,
+     *     has_wifi: bool,
+     *     has_kitchen: bool,
+     *     has_parking: bool,
+     *     has_sea_view: bool
+     * }
+     */
     public function toArray(): array
     {
         return [
-            'id'                 => $this->getId(),
-            'isAvailable'        => $this->isAvailable(),
-            'bedroomsCount'      => $this->getBedroomsCount(),
-            'pricePerNight'      => $this->getPricePerNight(),
-            'hasAirConditioning' => $this->hasAirConditioning(),
-            'hasWifi'            => $this->hasWifi(),
-            'hasKitchen'         => $this->hasKitchen(),
-            'hasParking'         => $this->hasParking(),
-            'hasSeaView'         => $this->hasSeaView(),
+            'id'                   => $this->getId(),
+            'is_available'         => $this->isAvailable(),
+            'bedrooms_count'       => $this->getBedroomsCount(),
+            'price_per_night'      => $this->getPricePerNight(),
+            'has_air_conditioning' => $this->hasAirConditioning(),
+            'has_wifi'             => $this->hasWifi(),
+            'has_kitchen'          => $this->hasKitchen(),
+            'has_parking'          => $this->hasParking(),
+            'has_sea_view'         => $this->hasSeaView(),
         ];
     }
 }
