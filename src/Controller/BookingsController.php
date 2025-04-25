@@ -1,4 +1,7 @@
 <?php
+
+declare (strict_types=1);
+
 namespace App\Controller;
 
 use App\Entity\Booking;
@@ -16,7 +19,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api/v1/bookings', name: 'bookings_api')]
-class BookingsController extends AbstractController
+final class BookingsController extends AbstractController
 {
     private ValidatorInterface $validator;
     private SerializerInterface $serializer;
@@ -39,7 +42,7 @@ class BookingsController extends AbstractController
     public function listBookings(): JsonResponse
     {
         $bookingsArray = array_map(
-            fn($booking) => $booking->toArray(),
+            fn ($booking) => $booking->toArray(),
             $this->bookingsRepository->findAllBookings()
         );
 
@@ -254,9 +257,10 @@ class BookingsController extends AbstractController
     }
 
     #[Route('/{id}', name: 'bookings_delete_by_id', methods: ['DELETE'])]
-    public function deleteBooking(Request $request, int $id): JsonResponse
+    public function deleteBooking(int $id): JsonResponse
     {
-        if (! $booking = $this->bookingsRepository->findBookingById($id)) {
+        $booking = $this->bookingsRepository->findBookingById($id);
+        if (! $booking) {
             return new JsonResponse(
                 ['status' => 'Booking not found'],
                 Response::HTTP_NOT_FOUND

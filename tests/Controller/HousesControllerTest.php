@@ -1,14 +1,18 @@
 <?php
+
+declare (strict_types=1);
+
 namespace App\Tests\Controller;
 
 use App\Entity\House;
 use App\Repository\HousesRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Override;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 
-class HousesControllerTest extends WebTestCase
+final class HousesControllerTest extends WebTestCase
 {
     /** @var HousesRepository $repository */
     private HousesRepository $housesRepository;
@@ -17,6 +21,7 @@ class HousesControllerTest extends WebTestCase
     private EntityManagerInterface $entityManager;
     private string $housesCsvPath = __DIR__ . '/../Resources/test_houses.csv';
 
+    #[Override]
     protected function setUp(): void
     {
         $this->client = static::createClient();
@@ -44,7 +49,7 @@ class HousesControllerTest extends WebTestCase
         $this->assertJson($response->getContent());
 
         $expectedData = array_map(
-            fn($house) => $house->toArray(),
+            fn ($house) => $house->toArray(),
             $this->housesRepository->findAllHouses()
         );
 

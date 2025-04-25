@@ -1,13 +1,16 @@
 <?php
+
+declare (strict_types=1);
+
 namespace App\Repository;
 
 use App\Entity\House;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use RuntimeException;
 
 class HousesRepository extends ServiceEntityRepository
 {
-
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, House::class);
@@ -69,12 +72,17 @@ class HousesRepository extends ServiceEntityRepository
     {
         $csvFile = fopen($filePath, 'r');
         if ($csvFile === false) {
-            throw new \RuntimeException("Unable to open the CSV file: $filePath");
+            throw new RuntimeException("Unable to open the CSV file: $filePath");
         }
 
         fgetcsv($csvFile, 0, ',', '"', '\\');
 
-        while (($data = fgetcsv($csvFile, 0, ',', '"', '\\')) !== false) {
+        while (! feof($csvFile)) {
+            $data = fgetcsv($csvFile, 0, ',', '"', '\\');
+            if ($data === false) {
+                continue;
+            }
+
             $house = (new House())
                 ->setIsAvailable($data[1] === '1')
                 ->setBedroomsCount((int) $data[2])

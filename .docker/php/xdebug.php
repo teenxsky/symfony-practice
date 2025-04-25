@@ -1,6 +1,6 @@
 <?php
 
-declare (strict_types = 1);
+declare(strict_types=1);
 
 $targetConfigPath = '/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini';
 $sourceConfigPath = __DIR__ . '/xdebug.ini';

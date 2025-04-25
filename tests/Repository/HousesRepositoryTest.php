@@ -1,13 +1,17 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Tests\Repository;
 
 use App\Entity\House;
 use App\Repository\HousesRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
+use Override;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-class HousesRepositoryTest extends KernelTestCase
+final class HousesRepositoryTest extends KernelTestCase
 {
     /** @var HousesRepository $housesRepository */
     private EntityRepository $housesRepository;
@@ -15,6 +19,7 @@ class HousesRepositoryTest extends KernelTestCase
     private EntityManagerInterface $entityManager;
     private string $housesCsvPath = __DIR__ . '/../Resources/test_houses.csv';
 
+    #[Override]
     protected function setUp(): void
     {
         $kernel = self::bootKernel();

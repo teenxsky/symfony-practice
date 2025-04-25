@@ -1,10 +1,12 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Entity;
 
-use App\Entity\House;
+use App\Repository\BookingsRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
-use App\Repository\BookingsRepository;
 
 #[ORM\Entity(repositoryClass: BookingsRepository::class)]
 class Booking

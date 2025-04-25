@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Tests\Controller;
 
 use App\Entity\Booking;
@@ -6,11 +9,12 @@ use App\Entity\House;
 use App\Repository\BookingsRepository;
 use App\Repository\HousesRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Override;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 
-class BookingsControllerTest extends WebTestCase
+final class BookingsControllerTest extends WebTestCase
 {
     /** @var HousesRepository $housesRepository */
     private HousesRepository $housesRepository;
@@ -22,6 +26,7 @@ class BookingsControllerTest extends WebTestCase
     private string $housesCsvPath   = __DIR__ . '/../Resources/test_houses.csv';
     private string $bookingsCsvPath = __DIR__ . '/../Resources/test_bookings.csv';
 
+    #[Override]
     protected function setUp(): void
     {
         $this->client = static::createClient();
@@ -53,7 +58,7 @@ class BookingsControllerTest extends WebTestCase
         $this->assertJson($response->getContent());
 
         $expectedData = array_map(
-            fn($booking) => $booking->toArray(),
+            fn ($booking) => $booking->toArray(),
             $this->bookingsRepository->findAllBookings()
         );
 

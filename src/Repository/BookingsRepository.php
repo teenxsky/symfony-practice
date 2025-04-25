@@ -1,10 +1,14 @@
 <?php
+
+declare (strict_types=1);
+
 namespace App\Repository;
 
 use App\Entity\Booking;
 use App\Entity\House;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use RuntimeException;
 
 class BookingsRepository extends ServiceEntityRepository
 {
@@ -64,12 +68,17 @@ class BookingsRepository extends ServiceEntityRepository
     {
         $csvFile = fopen($filePath, 'r');
         if ($csvFile === false) {
-            throw new \RuntimeException("Unable to open the CSV file: $filePath");
+            throw new RuntimeException("Unable to open the CSV file: $filePath");
         }
 
         fgetcsv($csvFile, 0, ',', '"', '\\');
 
-        while (($data = fgetcsv($csvFile, 0, ',', '"', '\\')) !== false) {
+        while (! feof($csvFile)) {
+            $data = fgetcsv($csvFile, 0, ',', '"', '\\');
+            if ($data === false) {
+                continue;
+            }
+
             $house = $this->getEntityManager()
                 ->getRepository(House::class)
                 ->find((int) $data[2]);

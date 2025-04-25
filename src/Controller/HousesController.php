@@ -1,4 +1,7 @@
 <?php
+
+declare (strict_types=1);
+
 namespace App\Controller;
 
 use App\Entity\House;
@@ -15,7 +18,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api/v1/houses', name: 'houses_api')]
-class HousesController extends AbstractController
+final class HousesController extends AbstractController
 {
     private HousesRepository $housesRepository;
     private SerializerInterface $serializer;
@@ -35,7 +38,7 @@ class HousesController extends AbstractController
     public function listHouses(): JsonResponse
     {
         $housesArray = array_map(
-            fn($house) => $house->toArray(),
+            fn ($house) => $house->toArray(),
             $this->housesRepository->findAllHouses()
         );
 
@@ -179,7 +182,7 @@ class HousesController extends AbstractController
     }
 
     #[Route('/{id}', name: 'houses_delete', methods: ['DELETE'])]
-    public function deleteHouse(Request $request, int $id): JsonResponse
+    public function deleteHouse(int $id): JsonResponse
     {
         $house = $this->housesRepository->findHouseById($id);
 
