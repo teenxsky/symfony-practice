@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Tests\Repository;
 
 use App\Entity\Booking;
@@ -6,6 +9,7 @@ use App\Entity\House;
 use App\Repository\BookingsRepository;
 use App\Repository\HousesRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Override;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 class BookingsRepositoryTest extends KernelTestCase
@@ -22,7 +26,8 @@ class BookingsRepositoryTest extends KernelTestCase
 
     private const HOUSES_CSV_PATH = __DIR__ . '/../Resources/test_houses.csv';
 
-    protected function setUp(): void
+    #[Override]
+    public function setUp(): void
     {
         $kernel = self::bootKernel();
         $this->assertSame('test', $kernel->getEnvironment());
@@ -36,20 +41,20 @@ class BookingsRepositoryTest extends KernelTestCase
 
         $this->bookings[] = (new Booking())
             ->setId(1)
-            ->setPhoneNumber("+1234567890")
+            ->setPhoneNumber('+1234567890')
             ->setComment('Test comment 1')
             ->setHouse(
                 $this->housesRepository->findHouseById(1)
             );
         $this->bookings[] = (new Booking())
             ->setId(2)
-            ->setPhoneNumber("+0987654321")
+            ->setPhoneNumber('+0987654321')
             ->setHouse(
                 $this->housesRepository->findHouseById(2)
             );
         $this->bookings[] = (new Booking())
             ->setId(3)
-            ->setPhoneNumber("+1122334455")
+            ->setPhoneNumber('+1122334455')
             ->setComment('Test comment 3')
             ->setHouse(
                 $this->housesRepository->findHouseById(3)
@@ -157,7 +162,7 @@ class BookingsRepositoryTest extends KernelTestCase
             $this->bookingsRepository->addBooking($booking);
         }
 
-        # Before updating booking
+        // Before updating booking
         $expectedBooking = $this->bookings[$bookingId - 1];
 
         $actualBooking = $this->bookingsRepository->findBookingById($bookingId);
@@ -168,11 +173,11 @@ class BookingsRepositoryTest extends KernelTestCase
             actual: $actualBooking
         );
 
-        # After updating booking
+        // After updating booking
         $expectedBooking = $this->bookings[$bookingId - 1];
         $expectedBooking
-            ->setPhoneNumber("+5555555555")
-            ->setComment("Test comment 1")
+            ->setPhoneNumber('+5555555555')
+            ->setComment('Test comment 1')
             ->setHouse(
                 $this->housesRepository->findHouseById(1)
             );

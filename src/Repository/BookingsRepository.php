@@ -1,10 +1,14 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Repository;
 
 use App\Entity\Booking;
 use App\Entity\House;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use RuntimeException;
 
 class BookingsRepository extends ServiceEntityRepository
 {
@@ -33,8 +37,8 @@ class BookingsRepository extends ServiceEntityRepository
      */
     public function findAllBookings(): array
     {
-        return $this->createQueryBuilder('h')
-            ->orderBy('h.id', 'ASC')
+        return $this->createQueryBuilder('b')
+            ->orderBy('b.id', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -81,13 +85,19 @@ class BookingsRepository extends ServiceEntityRepository
     public function loadFromCsv(string $filePath): void
     {
         $handle = fopen($filePath, 'r');
-        if (! $handle) {
-            throw new \RuntimeException("Unable to open the CSV file: $filePath");
+        if (!$handle) {
+            throw new RuntimeException("Unable to open the CSV file: $filePath");
         }
 
+        // Skip the first line (header row)
         fgetcsv($handle, 0, ',', '"', '\\');
 
-        while ($data = fgetcsv($handle, 0, ',', '"', '\\')) {
+        while (true) {
+            $data = fgetcsv($handle, 0, ',', '"', '\\');
+            if (!$data) {
+                break;
+            }
+
             $row = array_combine(
                 keys: self::BOOKING_FIELDS,
                 values: $data
@@ -96,7 +106,7 @@ class BookingsRepository extends ServiceEntityRepository
             $house = $this->getEntityManager()
                 ->getRepository(House::class)
                 ->find((int) $row['house_id']);
-            if (! $house) {
+            if (!$house) {
                 continue;
             }
 

@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<psalm
+        errorLevel="4"
+        resolveFromConfigFile="true"
+        cacheDirectory="var/cache/.psalm-cache"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="https://getpsalm.org/schema/config"
+        xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+        findUnusedBaselineEntry="true"
+        findUnusedCode="true"
+        ignoreInternalFunctionFalseReturn="false"
+        ignoreInternalFunctionNullReturn="false"
+        ensureArrayIntOffsetsExist="true"
+        ensureArrayStringOffsetsExist="true"
+        strictBinaryOperands="true"
+>
+    <projectFiles>
+        <directory name="src"/>
+        <directory name="tests"/>
+        <ignoreFiles>
+            <directory name="src/Controller/Admin"/>
+            <directory name="bin"/>
+            <directory name="var"/>
+            <directory name="vendor"/>
+            <file name="config/preload.php" />
+            <file name="public/index.php" />
+            <file name="tests/bootstrap.php" />
+        </ignoreFiles>
+    </projectFiles>
+
+    <issueHandlers>
+        <UnusedClass>
+            <errorLevel type="suppress">
+                <directory name="src/Controller"/>
+                <directory name="tests"/>
+            </errorLevel>
+        </UnusedClass>
+        <PossiblyUnusedMethod>
+            <errorLevel type="suppress">
+                <directory name="src/Repository"/>
+            </errorLevel>
+        </PossiblyUnusedMethod>
+        <PossiblyUnusedParam>
+            <errorLevel type="suppress">
+                <directory name="src/Repository"/>
+            </errorLevel>
+        </PossiblyUnusedParam>
+    </issueHandlers>
+</psalm>

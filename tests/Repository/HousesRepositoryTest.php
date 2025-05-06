@@ -1,10 +1,14 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Tests\Repository;
 
 use App\Entity\House;
 use App\Repository\HousesRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
+use Override;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 class HousesRepositoryTest extends KernelTestCase
@@ -16,7 +20,8 @@ class HousesRepositoryTest extends KernelTestCase
 
     private EntityManagerInterface $entityManager;
 
-    protected function setUp(): void
+    #[Override]
+    public function setUp(): void
     {
         $kernel = self::bootKernel();
         $this->assertSame('test', $kernel->getEnvironment());
@@ -67,7 +72,8 @@ class HousesRepositoryTest extends KernelTestCase
     {
         $this->assertEquals(
             $expected->getId(),
-            $actual->getId());
+            $actual->getId()
+        );
         $this->assertEquals(
             $expected->getBedroomsCount(),
             $actual->getBedroomsCount()

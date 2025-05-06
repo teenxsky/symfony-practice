@@ -1,7 +1,9 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Entity;
 
-use App\Entity\House;
 use App\Repository\BookingsRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -92,14 +94,14 @@ class Booking
     }
 
     /**
-     * @return array{
+     * @return ?array{
      *     id: int,
      *     phone_number: string,
      *     house_id: int,
-     *     comment: string|null,
+     *     comment: string,
      * }
      */
-    public function toArray(): array
+    public function toArray(): ?array
     {
         return [
             'id'           => $this->getId(),

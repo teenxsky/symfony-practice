@@ -1,9 +1,13 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Repository;
 
 use App\Entity\House;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use RuntimeException;
 
 class HousesRepository extends ServiceEntityRepository
 {
@@ -90,13 +94,19 @@ class HousesRepository extends ServiceEntityRepository
     public function loadFromCsv(string $filePath): void
     {
         $handle = fopen($filePath, 'r');
-        if (! $handle) {
-            throw new \RuntimeException("Unable to open the CSV file: $filePath");
+        if (!$handle) {
+            throw new RuntimeException("Unable to open the CSV file: $filePath");
         }
 
+        // Skip the first line (header row)
         fgetcsv($handle, 0, ',', '"', '\\');
 
-        while ($data = fgetcsv($handle, 0, ',', '"', '\\')) {
+        while (true) {
+            $data = fgetcsv($handle, 0, ',', '"', '\\');
+            if (!$data) {
+                break;
+            }
+
             $row = array_combine(
                 keys: self::HOUSE_FIELDS,
                 values: $data
