@@ -1,6 +1,6 @@
 <?php
 
-declare (strict_types=1);
+declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
@@ -12,101 +12,260 @@ use Doctrine\ORM\EntityManagerInterface;
 use Override;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-final class BookingsRepositoryTest extends KernelTestCase
+class BookingsRepositoryTest extends KernelTestCase
 {
+    /** @var Booking[] */
+    private array $bookings = [];
+
     /** @var HousesRepository $housesRepository */
     private HousesRepository $housesRepository;
     /** @var BookingsRepository $bookingsRepository */
     private BookingsRepository $bookingsRepository;
 
     private EntityManagerInterface $entityManager;
-    private string $housesCsvPath   = __DIR__ . '/../Resources/test_houses.csv';
-    private string $bookingsCsvPath = __DIR__ . '/../Resources/test_bookings.csv';
+
+    private const HOUSES_CSV_PATH = __DIR__ . '/../Resources/test_houses.csv';
 
     #[Override]
-    protected function setUp(): void
+    public function setUp(): void
     {
         $kernel = self::bootKernel();
         $this->assertSame('test', $kernel->getEnvironment());
 
-        $this->entityManager      = static::getContainer()->get('doctrine')->getManager();
+        $this->entityManager = static::getContainer()->get('doctrine')->getManager();
+        $this->truncateTables();
+
         $this->bookingsRepository = $this->entityManager->getRepository(Booking::class);
         $this->housesRepository   = $this->entityManager->getRepository(House::class);
+        $this->housesRepository->loadFromCsv(self::HOUSES_CSV_PATH);
 
-        $this->truncateEntities();
-
-        $this->housesRepository->loadFromCsv($this->housesCsvPath);
-        $this->bookingsRepository->loadFromCsv($this->bookingsCsvPath);
+        $this->bookings[] = (new Booking())
+            ->setId(1)
+            ->setPhoneNumber('+1234567890')
+            ->setComment('Test comment 1')
+            ->setHouse(
+                $this->housesRepository->findHouseById(1)
+            );
+        $this->bookings[] = (new Booking())
+            ->setId(2)
+            ->setPhoneNumber('+0987654321')
+            ->setHouse(
+                $this->housesRepository->findHouseById(2)
+            );
+        $this->bookings[] = (new Booking())
+            ->setId(3)
+            ->setPhoneNumber('+1122334455')
+            ->setComment('Test comment 3')
+            ->setHouse(
+                $this->housesRepository->findHouseById(3)
+            );
     }
 
-    private function truncateEntities(): void
+    private function truncateTables(): void
     {
         $connection = $this->entityManager->getConnection();
         $connection->executeStatement('TRUNCATE TABLE booking RESTART IDENTITY CASCADE');
         $connection->executeStatement('TRUNCATE TABLE house RESTART IDENTITY CASCADE');
     }
 
-    public function testFindAllBookings()
+    private function assertBookingEquals(Booking $expected, Booking $actual): void
     {
+        $this->assertEquals(
+            $expected->getId(),
+            $actual->getId()
+        );
+        $this->assertEquals(
+            $expected->getHouse()->getId(),
+            $actual->getHouse()->getId()
+        );
+        $this->assertEquals(
+            $expected->getPhoneNumber(),
+            $actual->getPhoneNumber()
+        );
+        $this->assertEquals(
+            $expected->getComment(),
+            $actual->getComment()
+        );
+    }
+
+    public function testAddBooking(): void
+    {
+        $bookingId       = 1;
+        $expectedBooking = $this->bookings[$bookingId - 1];
+
+        $this->bookingsRepository->addBooking($expectedBooking);
+
+        $this->assertCount(
+            1,
+            $this->bookingsRepository->findAllBookings()
+        );
+
+        $actualBooking = $this->bookingsRepository->findBookingById($bookingId);
+
+        $this->assertBookingEquals(
+            expected: $expectedBooking,
+            actual: $actualBooking
+        );
+    }
+
+    public function testFindAllBookings(): void
+    {
+        $countBefore = 0;
+        $countAfter  = count($this->bookings);
+
+        $this->assertCount(
+            $countBefore,
+            $this->bookingsRepository->findAllBookings()
+        );
+
+        foreach ($this->bookings as $booking) {
+            $this->bookingsRepository->addBooking($booking);
+        }
+
         $bookings = $this->bookingsRepository->findAllBookings();
 
-        $this->assertCount(2, $bookings);
-        $this->assertEquals('+1234567890', $bookings[0]->getPhoneNumber());
-        $this->assertEquals('Test booking 1', $bookings[0]->getComment());
-        $this->assertEquals('+1987654321', $bookings[1]->getPhoneNumber());
-        $this->assertEquals('Test booking 2', $bookings[1]->getComment());
+        $this->assertCount(
+            $countAfter,
+            $bookings
+        );
+        for ($i = 0; $i < $countAfter; $i++) {
+            $this->assertBookingEquals(
+                expected: $this->bookings[$i],
+                actual: $bookings[$i]
+            );
+        }
     }
 
-    public function testFindBookingById()
+    public function testFindBookingById(): void
     {
-        $booking = $this->bookingsRepository->findBookingById(1);
+        $bookingId       = 2;
+        $expectedBooking = $this->bookings[$bookingId - 1];
 
-        $this->assertNotNull($booking);
-        $this->assertEquals(1, $booking->getId());
-        $this->assertEquals('+1234567890', $booking->getPhoneNumber());
-        $this->assertEquals('Test booking 1', $booking->getComment());
+        foreach ($this->bookings as $booking) {
+            $this->bookingsRepository->addBooking($booking);
+        }
+
+        $actualBooking = $this->bookingsRepository->findBookingById($bookingId);
+
+        $this->assertNotNull($actualBooking);
+        $this->assertBookingEquals(
+            expected: $expectedBooking,
+            actual: $actualBooking
+        );
     }
 
-    public function testAddBooking()
+    public function testUpdateBooking(): void
     {
-        $house = $this->housesRepository->find(1);
-        $this->assertNotNull($house);
+        $bookingId = 2;
 
-        $newBooking = (new Booking())
-            ->setPhoneNumber('+1122334455')
-            ->setComment('New test booking')
-            ->setHouse($house);
+        foreach ($this->bookings as $booking) {
+            $this->bookingsRepository->addBooking($booking);
+        }
 
-        $this->bookingsRepository->addBooking($newBooking);
+        // Before updating booking
+        $expectedBooking = $this->bookings[$bookingId - 1];
 
+        $actualBooking = $this->bookingsRepository->findBookingById($bookingId);
+
+        $this->assertNotNull($actualBooking);
+        $this->assertBookingEquals(
+            expected: $expectedBooking,
+            actual: $actualBooking
+        );
+
+        // After updating booking
+        $expectedBooking = $this->bookings[$bookingId - 1];
+        $expectedBooking
+            ->setPhoneNumber('+5555555555')
+            ->setComment('Test comment 1')
+            ->setHouse(
+                $this->housesRepository->findHouseById(1)
+            );
+
+        $this->bookingsRepository->updateBooking($expectedBooking);
+
+        $actualBooking = $this->bookingsRepository->findBookingById($bookingId);
+
+        $this->assertNotNull($actualBooking);
+        $this->assertBookingEquals(
+            expected: $expectedBooking,
+            actual: $actualBooking
+        );
+    }
+
+    public function testDeleteBooking(): void
+    {
+        $bookingId   = 2;
+        $countBefore = count($this->bookings);
+        $countAfter  = count($this->bookings) - 1;
+
+        foreach ($this->bookings as $booking) {
+            $this->bookingsRepository->addBooking($booking);
+        }
+
+        $this->assertCount(
+            $countBefore,
+            $this->bookingsRepository->findAllBookings()
+        );
+
+        $this->bookingsRepository->deleteBookingById($bookingId);
+
+        $this->assertCount(
+            $countAfter,
+            $this->bookingsRepository->findAllBookings()
+        );
+        $this->assertNull(
+            $this->bookingsRepository->findBookingById($bookingId)
+        );
+    }
+
+    public function testLoadFromCsv(): void
+    {
+        $countBefore = 0;
+        $countAfter  = count($this->bookings);
+
+        $this->assertCount(
+            $countBefore,
+            $this->bookingsRepository->findAllBookings()
+        );
+
+        // Create a CSV file with test data
+        $bookingsCsvPath = __DIR__ . '/../Resources/~$test_bookings.csv';
+        $handle          = fopen($bookingsCsvPath, 'w');
+        fputcsv(
+            $handle,
+            $this->bookingsRepository->getFields(),
+            ',',
+            '"',
+            '\\'
+        );
+
+        foreach ($this->bookings as $booking) {
+            fputcsv(
+                $handle,
+                $booking->toArray(),
+                ',',
+                '"',
+                '\\'
+            );
+        }
+        fclose($handle);
+
+        // Load the CSV file into the repository
+        $this->bookingsRepository->loadFromCsv($bookingsCsvPath);
+
+        // Check that the bookings were loaded correctly
         $bookings = $this->bookingsRepository->findAllBookings();
-        $this->assertCount(3, $bookings);
-        $this->assertEquals('+1122334455', $bookings[2]->getPhoneNumber());
-        $this->assertEquals('New test booking', $bookings[2]->getComment());
-    }
 
-    public function testUpdateBooking()
-    {
-        $booking = $this->bookingsRepository->findBookingById(1);
-        $this->assertNotNull($booking);
-
-        $booking->setPhoneNumber('+9988776655');
-        $booking->setComment('Updated booking comment');
-        $this->bookingsRepository->updateBooking($booking);
-
-        $updatedBooking = $this->bookingsRepository->findBookingById(1);
-        $this->assertEquals('+9988776655', $updatedBooking->getPhoneNumber());
-        $this->assertEquals('Updated booking comment', $updatedBooking->getComment());
-    }
-
-    public function testDeleteBooking()
-    {
-        $this->bookingsRepository->deleteBookingById(1);
-
-        $bookings = $this->bookingsRepository->findAllBookings();
-        $this->assertCount(1, $bookings);
-
-        $deletedBooking = $this->bookingsRepository->findBookingById(1);
-        $this->assertNull($deletedBooking);
+        $this->assertCount(
+            $countAfter,
+            $bookings
+        );
+        for ($i = 0; $i < $countAfter; $i++) {
+            $this->assertBookingEquals(
+                expected: $this->bookings[$i],
+                actual: $bookings[$i]
+            );
+        }
     }
 }

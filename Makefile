@@ -42,7 +42,7 @@ create-db:
 
 # Make dumb and after this executes Doctrine migrations
 migrate-db:
-	make make-dump && $(DOCKER_COMPOSE) exec backend bash -c "bin/console doctrine:migrations:migrate"
+	make create-dump && $(DOCKER_COMPOSE) exec backend bash -c "bin/console doctrine:migrations:migrate"
 
 # Creates a new database for tests
 create-test-db:

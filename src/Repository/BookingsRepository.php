@@ -1,6 +1,6 @@
 <?php
 
-declare (strict_types=1);
+declare(strict_types=1);
 
 namespace App\Repository;
 
@@ -12,15 +12,33 @@ use RuntimeException;
 
 class BookingsRepository extends ServiceEntityRepository
 {
+    private const BOOKING_FIELDS = [
+        'id',
+        'phone_number',
+        'house_id',
+        'comment',
+    ];
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Booking::class);
     }
 
+    /**
+     * @return string[]
+     */
+    public function getFields(): array
+    {
+        return self::BOOKING_FIELDS;
+    }
+
+    /**
+     * @return Booking[]
+     */
     public function findAllBookings(): array
     {
-        return $this->createQueryBuilder('h')
-            ->orderBy('h.id', 'ASC')
+        return $this->createQueryBuilder('b')
+            ->orderBy('b.id', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -66,36 +84,41 @@ class BookingsRepository extends ServiceEntityRepository
 
     public function loadFromCsv(string $filePath): void
     {
-        $csvFile = fopen($filePath, 'r');
-        if ($csvFile === false) {
+        $handle = fopen($filePath, 'r');
+        if (!$handle) {
             throw new RuntimeException("Unable to open the CSV file: $filePath");
         }
 
-        fgetcsv($csvFile, 0, ',', '"', '\\');
+        // Skip the first line (header row)
+        fgetcsv($handle, 0, ',', '"', '\\');
 
-        while (! feof($csvFile)) {
-            $data = fgetcsv($csvFile, 0, ',', '"', '\\');
-            if ($data === false) {
-                continue;
+        while (true) {
+            $data = fgetcsv($handle, 0, ',', '"', '\\');
+            if (!$data) {
+                break;
             }
+
+            $row = array_combine(
+                keys: self::BOOKING_FIELDS,
+                values: $data
+            );
 
             $house = $this->getEntityManager()
                 ->getRepository(House::class)
-                ->find((int) $data[2]);
-
-            if ($house === null) {
+                ->find((int) $row['house_id']);
+            if (!$house) {
                 continue;
             }
 
             $booking = (new Booking())
-                ->setId((int) $data[0])
-                ->setPhoneNumber((string) $data[1])
+                ->setId((int) $row['id'])
+                ->setPhoneNumber((string) $row['phone_number'])
                 ->setHouse($house)
-                ->setComment((string) $data[3]);
+                ->setComment((string) $row['comment']);
 
             $this->addBooking($booking);
         }
 
-        fclose($csvFile);
+        fclose($handle);
     }
 }
