@@ -4,16 +4,21 @@ namespace App\Tests\Controller;
 use App\Constant\HousesMessages;
 use App\Entity\House;
 use App\Repository\HousesRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 
 class HousesControllerTest extends WebTestCase
 {
-    private KernelBrowser $client;
-
-    /** @var HousesRepository $housesRepository */
+    /** @var HousesRepository $repository */
     private static HousesRepository $housesRepository;
+
+    private KernelBrowser $client;
+    private EntityManagerInterface $entityManager;
+
+    // Test Data Path
+    private const HOUSES_CSV_PATH = __DIR__ . '/../Resources/test_houses.csv';
 
     // API Endpoints
     private const API_HOUSES    = '/api/v1/houses/';
@@ -21,28 +26,30 @@ class HousesControllerTest extends WebTestCase
 
     public static function setUpBeforeClass(): void
     {
-        self::initializeRepositories();
+        self::initializeDatabase();
     }
 
-    protected static function initializeRepositories(): void
+    protected static function initializeDatabase(): void
     {
-        copy(
-            __DIR__ . '/../Resources/test_houses.csv',
-            __DIR__ . '/../Resources/~$test_houses.csv'
-        );
+        $kernel = static::createKernel();
+        $kernel->boot();
+        self::assertSame('test', $kernel->getEnvironment());
 
-        self::$housesRepository = new HousesRepository(__DIR__ . '/../Resources/~$test_houses.csv');
+        $entityManager = $kernel->getContainer()->get('doctrine')->getManager();
+
+        $connection = $entityManager->getConnection();
+        $connection->executeStatement('TRUNCATE TABLE house RESTART IDENTITY CASCADE');
+
+        self::$housesRepository = $entityManager->getRepository(House::class);
+        self::$housesRepository->loadFromCsv(self::HOUSES_CSV_PATH);
     }
 
     protected function setUp(): void
     {
-        $this->client = static::createClient();
+        $this->client        = static::createClient();
+        $this->entityManager = $this->client->getContainer()->get('doctrine')->getManager();
 
-        $container = $this->client->getContainer();
-        $container->set(
-            HousesRepository::class,
-            self::$housesRepository
-        );
+        self::$housesRepository = $this->entityManager->getRepository(House::class);
     }
 
     private function assertResponse(
@@ -182,7 +189,8 @@ class HousesControllerTest extends WebTestCase
             ->setHasWifi(true)
             ->setHasKitchen(true)
             ->setHasParking(true)
-            ->setHasSeaView(false);
+            ->setHasSeaView(false)
+            ->toArray();
 
         $this->assertNull(
             self::$housesRepository
@@ -195,7 +203,7 @@ class HousesControllerTest extends WebTestCase
             parameters: [],
             files: [],
             server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode($expectedHouse->toArray())
+            content: json_encode($expectedHouse)
         );
         $this->assertResponse(
             response: $this->client->getResponse(),
@@ -208,7 +216,7 @@ class HousesControllerTest extends WebTestCase
                 ->findHouseById($expectedHouseId)
         );
         $this->assertHouseEquals(
-            expected: $expectedHouse->toArray(),
+            expected: $expectedHouse,
             actual: self::$housesRepository
                 ->findHouseById($expectedHouseId)
                 ->toArray()
@@ -242,7 +250,8 @@ class HousesControllerTest extends WebTestCase
             ->setHasWifi(true)
             ->setHasKitchen(true)
             ->setHasParking(true)
-            ->setHasSeaView(false);
+            ->setHasSeaView(false)
+            ->toArray();
 
         $this->assertNull(
             self::$housesRepository
@@ -255,7 +264,7 @@ class HousesControllerTest extends WebTestCase
             parameters: [],
             files: [],
             server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode($house->toArray())
+            content: json_encode($house)
         );
         $this->assertResponse(
             response: $this->client->getResponse(),
@@ -288,20 +297,21 @@ class HousesControllerTest extends WebTestCase
             ->setHasWifi(false)
             ->setHasKitchen(false)
             ->setHasParking(true)
-            ->setHasSeaView(false);
+            ->setHasSeaView(false)
+            ->toArray();
 
         $actualHouse = self::$housesRepository->findHouseById($houseId);
         $this->assertNotNull($actualHouse);
         $this->assertNotEquals(
-            $newHouse->getBedroomsCount(),
+            $newHouse['bedrooms_count'],
             $actualHouse->getBedroomsCount()
         );
         $this->assertNotEquals(
-            $newHouse->isAvailable(),
+            $newHouse['is_available'],
             $actualHouse->isAvailable()
         );
         $this->assertNotEquals(
-            $newHouse->getPricePerNight(),
+            $newHouse['price_per_night'],
             $actualHouse->getPricePerNight()
         );
 
@@ -311,7 +321,7 @@ class HousesControllerTest extends WebTestCase
             parameters: [],
             files: [],
             server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode($newHouse->toArray())
+            content: json_encode($newHouse)
         );
         $this->assertResponse(
             response: $this->client->getResponse(),
@@ -324,7 +334,7 @@ class HousesControllerTest extends WebTestCase
                 ->findHouseById($houseId)
         );
         $this->assertHouseEquals(
-            expected: $newHouse->toArray(),
+            expected: $newHouse,
             actual: self::$housesRepository
                 ->findHouseById($houseId)
                 ->toArray(),

@@ -1,58 +1,70 @@
 <?php
 namespace App\Entity;
 
-// use Doctrine\ORM\Mapping as ORM;
+use App\Repository\HousesRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Ignore;
 use Symfony\Component\Validator\Constraints as Assert;
 
-// #[ORM\Entity(repositoryClass: HousesRepository::class)]
+#[ORM\Entity(repositoryClass: HousesRepository::class)]
 class House
 {
-    // #[ORM\Id]
-    // #[ORM\GeneratedValue]
-    // #[ORM\Column]
+    #[ORM\OneToMany(mappedBy: 'house', targetEntity: Booking::class, cascade: ['persist', 'remove'])]
+    private Collection $bookings;
+
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
     private ?int $id = null;
 
+    #[ORM\Column(options: ['default' => true])]
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
     private ?bool $isAvailable = true;
 
-    // #[ORM\Column]
+    #[ORM\Column(length: 20)]
     #[Assert\NotNull]
     #[Assert\Type('integer')]
     #[Assert\Range(min: 1, max: 20)]
     private ?int $bedroomsCount = null;
 
-    // #[ORM\Column]
+    #[ORM\Column(length: 100000)]
     #[Assert\NotNull]
     #[Assert\Type('integer')]
     #[Assert\Range(min: 100, max: 100000)]
     private ?int $pricePerNight = null;
 
-    // #[ORM\Column]
+    #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
     private ?bool $hasAirConditioning = null;
 
-    // #[ORM\Column]
+    #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
     private ?bool $hasWifi = null;
 
-    // #[ORM\Column]
+    #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
     private ?bool $hasKitchen = null;
 
-    // #[ORM\Column]
+    #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
     private ?bool $hasParking = null;
 
-    // #[ORM\Column]
+    #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Type('boolean')]
     private ?bool $hasSeaView = null;
+
+    public function __construct()
+    {
+        $this->bookings = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -62,6 +74,32 @@ class House
     public function setId(int $id): static
     {
         $this->id = $id;
+
+        return $this;
+    }
+
+    public function getBookings(): Collection
+    {
+        return $this->bookings;
+    }
+
+    public function addBooking(Booking $booking): static
+    {
+        if (! $this->bookings->contains($booking)) {
+            $this->bookings->add($booking);
+            $booking->setHouse($this);
+        }
+
+        return $this;
+    }
+
+    public function removeBooking(Booking $booking): static
+    {
+        if ($this->bookings->removeElement($booking)) {
+            if ($booking->getHouse() === $this) {
+                $booking->setHouse(null);
+            }
+        }
 
         return $this;
     }

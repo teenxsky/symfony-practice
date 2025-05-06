@@ -1,18 +1,26 @@
 <?php
 namespace App\Entity;
 
-// use Doctrine\ORM\Mapping as ORM;
+use App\Entity\House;
+use App\Repository\BookingsRepository;
+use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
-// #[ORM\Entity(repositoryClass: BookingsRepository::class)]
+#[ORM\Entity(repositoryClass: BookingsRepository::class)]
 class Booking
 {
-    // #[ORM\Id]
-    // #[ORM\GeneratedValue]
-    // #[ORM\Column]
+    // TODO: Add time for booking
+
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
     private ?int $id = null;
 
-    // #[ORM\Column(length: 255)]
+    #[ORM\ManyToOne(targetEntity: House::class, inversedBy: 'bookings')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?House $house = null;
+
+    #[ORM\Column(length: 15)]
     #[Assert\NotNull]
     #[Assert\Regex(
         pattern: '/^\+?[0-9]{1,3}?[0-9]{7,14}$/',
@@ -27,12 +35,7 @@ class Booking
     #[Assert\Type('string')]
     private ?string $phoneNumber = null;
 
-    // #[ORM\Column]
-    #[Assert\NotNull]
-    #[Assert\Type('integer')]
-    private ?int $houseId = null;
-
-    // #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(length: 255, nullable: true)]
     #[Assert\Type('string')]
     #[Assert\Length(
         max: 255,
@@ -64,14 +67,14 @@ class Booking
         return $this;
     }
 
-    public function getHouseId(): ?int
+    public function getHouse(): ?House
     {
-        return $this->houseId;
+        return $this->house;
     }
 
-    public function setHouseId(int $houseId): static
+    public function setHouse(?House $house): static
     {
-        $this->houseId = $houseId;
+        $this->house = $house;
 
         return $this;
     }
@@ -101,7 +104,7 @@ class Booking
         return [
             'id'           => $this->getId(),
             'phone_number' => $this->getPhoneNumber(),
-            'house_id'     => $this->getHouseId(),
+            'house_id'     => $this->getHouse()->getId(),
             'comment'      => $this->getComment(),
         ];
     }

@@ -22,7 +22,7 @@ RUN apk add --no-cache autoconf g++ make linux-headers musl-dev \
 
 COPY . .
 
-COPY ./.docker/dev/php/entrypoint.sh /usr/local/entrypoint.sh
+COPY ./.docker/php/entrypoint.sh /usr/local/entrypoint.sh
 RUN chmod +x /usr/local/entrypoint.sh
 ENTRYPOINT ["sh", "/usr/local/entrypoint.sh"]
 

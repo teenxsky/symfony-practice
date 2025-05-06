@@ -3,23 +3,28 @@ namespace App\Tests\Repository;
 
 use App\Entity\House;
 use App\Repository\HousesRepository;
-use PHPUnit\Framework\TestCase;
-use ReflectionClass;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityRepository;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-class HousesRepositoryTest extends TestCase
+class HousesRepositoryTest extends KernelTestCase
 {
-    private string $filePath = __DIR__ . '/../Resources/~$test_houses.csv';
-
     /** @var House[] */
     private array $houses = [];
     /** @var HousesRepository $housesRepository */
-    private HousesRepository $housesRepository;
+    private EntityRepository $housesRepository;
+
+    private EntityManagerInterface $entityManager;
 
     protected function setUp(): void
     {
-        if (file_exists($this->filePath)) {
-            unlink($this->filePath);
-        }
+        $kernel = self::bootKernel();
+        $this->assertSame('test', $kernel->getEnvironment());
+
+        $this->entityManager = static::getContainer()->get('doctrine')->getManager();
+        $this->truncateTables();
+
+        $this->housesRepository = $this->entityManager->getRepository(House::class);
 
         $this->houses[] = (new House())
             ->setId(1)
@@ -50,17 +55,12 @@ class HousesRepositoryTest extends TestCase
             ->setHasKitchen(false)
             ->setHasParking(false)
             ->setHasSeaView(false);
-
-        $this->housesRepository = new HousesRepository($this->filePath);
     }
 
-    protected function tearDown(): void
+    private function truncateTables(): void
     {
-        if (file_exists($this->filePath)) {
-            unlink($this->filePath);
-        }
-
-        $this->houses = [];
+        $connection = $this->entityManager->getConnection();
+        $connection->executeStatement('TRUNCATE TABLE house RESTART IDENTITY CASCADE');
     }
 
     private function assertHousesEqual(House $expected, House $actual): void
@@ -214,7 +214,7 @@ class HousesRepositoryTest extends TestCase
             $this->housesRepository->findAllHouses()
         );
 
-        $this->housesRepository->deleteHouse($houseId);
+        $this->housesRepository->deleteHouseById($houseId);
 
         $this->assertCount(
             $countAfter,
@@ -225,16 +225,53 @@ class HousesRepositoryTest extends TestCase
         );
     }
 
-    public function testSaveHousesPrivate(): void
+    public function testLoadFromCsv(): void
     {
-        $methodName = 'saveHouses';
+        $countBefore = 0;
+        $countAfter  = count($this->houses);
 
-        $reflection = new ReflectionClass($this->housesRepository);
-        $method     = $reflection->getMethod($methodName);
-
-        $this->assertTrue(
-            method_exists($this->housesRepository, $methodName)
+        $this->assertCount(
+            $countBefore,
+            $this->housesRepository->findAllHouses()
         );
-        $this->assertTrue($method->isPrivate());
+
+        // Create a CSV file with test data
+        $housesCsvPath = __DIR__ . '/../Resources/~$test_houses.csv';
+        $handle        = fopen($housesCsvPath, 'w');
+        fputcsv(
+            $handle,
+            $this->housesRepository->getFields(),
+            ',',
+            '"',
+            '\\'
+        );
+
+        foreach ($this->houses as $house) {
+            fputcsv(
+                $handle,
+                $house->toArray(),
+                ',',
+                '"',
+                '\\'
+            );
+        }
+        fclose($handle);
+
+        // Load the CSV file into the repository
+        $this->housesRepository->loadFromCsv($housesCsvPath);
+
+        // Check that the houses were loaded correctly
+        $bookings = $this->housesRepository->findAllHouses();
+
+        $this->assertCount(
+            $countAfter,
+            $bookings
+        );
+        for ($i = 0; $i < $countAfter; $i++) {
+            $this->assertHousesEqual(
+                expected: $this->houses[$i],
+                actual: $bookings[$i]
+            );
+        }
     }
 }

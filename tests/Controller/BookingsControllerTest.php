@@ -4,20 +4,27 @@ namespace App\Tests\Controller;
 use App\Constant\BookingsMessages;
 use App\Constant\HousesMessages;
 use App\Entity\Booking;
+use App\Entity\House;
 use App\Repository\BookingsRepository;
 use App\Repository\HousesRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 
 class BookingsControllerTest extends WebTestCase
 {
-    private KernelBrowser $client;
-
     /** @var HousesRepository $housesRepository */
     private static HousesRepository $housesRepository;
     /** @var BookingsRepository $bookingsRepository */
     private static BookingsRepository $bookingsRepository;
+
+    private KernelBrowser $client;
+    private EntityManagerInterface $entityManager;
+
+    // Test Data Paths
+    private const HOUSES_CSV_PATH   = __DIR__ . '/../Resources/test_houses.csv';
+    private const BOOKINGS_CSV_PATH = __DIR__ . '/../Resources/test_bookings.csv';
 
     // API Endpoints
     private const API_BOOKINGS    = '/api/v1/bookings/';
@@ -25,37 +32,35 @@ class BookingsControllerTest extends WebTestCase
 
     public static function setUpBeforeClass(): void
     {
-        self::initializeRepositories();
+        self::initializeDatabase();
     }
 
-    protected static function initializeRepositories(): void
+    protected static function initializeDatabase(): void
     {
-        copy(
-            __DIR__ . '/../Resources/test_bookings.csv',
-            __DIR__ . '/../Resources/~$test_bookings.csv'
-        );
-        copy(
-            __DIR__ . '/../Resources/test_houses.csv',
-            __DIR__ . '/../Resources/~$test_houses.csv'
-        );
+        $kernel = static::createKernel();
+        $kernel->boot();
+        self::assertSame('test', $kernel->getEnvironment());
 
-        self::$bookingsRepository = new BookingsRepository(__DIR__ . '/../Resources/~$test_bookings.csv');
-        self::$housesRepository   = new HousesRepository(__DIR__ . '/../Resources/~$test_houses.csv');
+        $entityManager = $kernel->getContainer()->get('doctrine')->getManager();
+
+        $connection = $entityManager->getConnection();
+        $connection->executeStatement('TRUNCATE TABLE booking RESTART IDENTITY CASCADE');
+        $connection->executeStatement('TRUNCATE TABLE house RESTART IDENTITY CASCADE');
+
+        self::$housesRepository = $entityManager->getRepository(House::class);
+        self::$housesRepository->loadFromCsv(self::HOUSES_CSV_PATH);
+
+        self::$bookingsRepository = $entityManager->getRepository(Booking::class);
+        self::$bookingsRepository->loadFromCsv(self::BOOKINGS_CSV_PATH);
     }
 
     protected function setUp(): void
     {
-        $this->client = static::createClient();
+        $this->client        = static::createClient();
+        $this->entityManager = $this->client->getContainer()->get('doctrine')->getManager();
 
-        $container = ($this->client->getContainer());
-        $container->set(
-            BookingsRepository::class,
-            self::$bookingsRepository
-        );
-        $container->set(
-            HousesRepository::class,
-            self::$housesRepository
-        );
+        self::$housesRepository   = $this->entityManager->getRepository(House::class);
+        self::$bookingsRepository = $this->entityManager->getRepository(Booking::class);
     }
 
     private function assertResponse(
@@ -133,12 +138,18 @@ class BookingsControllerTest extends WebTestCase
         $newBooking        = (new Booking())
             ->setId($expectedBookingId)
             ->setPhoneNumber('+1234567890')
-            ->setHouseId(3)
-            ->setComment('Test booking 3');
+            ->setHouse(
+                (new House())
+                    ->setId(3)
+            )
+            ->setComment('Test booking 3')
+            ->toArray();
 
         $this->assertTrue(
             self::$housesRepository
-                ->findHouseById($newBooking->getHouseId())
+                ->findHouseById(
+                    $newBooking['house_id']
+                )
                 ->isAvailable()
         );
 
@@ -148,7 +159,7 @@ class BookingsControllerTest extends WebTestCase
             parameters: [],
             files: [],
             server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode($newBooking->toArray())
+            content: json_encode($newBooking)
         );
         $this->assertResponse(
             response: $this->client->getResponse(),
@@ -161,7 +172,7 @@ class BookingsControllerTest extends WebTestCase
                 ->findBookingById($expectedBookingId)
         );
         $this->assertBookingEquals(
-            expected: $newBooking->toArray(),
+            expected: $newBooking,
             actual: self::$bookingsRepository
                 ->findBookingById($expectedBookingId)
                 ->toArray()
@@ -169,7 +180,9 @@ class BookingsControllerTest extends WebTestCase
 
         $this->assertFalse(
             self::$housesRepository
-                ->findHouseById($newBooking->getHouseId())
+                ->findHouseById(
+                    $newBooking['house_id']
+                )
                 ->isAvailable()
         );
     }
@@ -186,8 +199,12 @@ class BookingsControllerTest extends WebTestCase
         $expectedBooking   = (new Booking())
             ->setId($expectedBookingId)
             ->setPhoneNumber('+1234567890')
-            ->setHouseId(999)
-            ->setComment('Test booking 4');
+            ->setHouse(
+                (new House())
+                    ->setId(999)
+            )
+            ->setComment('Test booking 4')
+            ->toArray();
 
         $this->assertNull(
             self::$bookingsRepository
@@ -200,7 +217,7 @@ class BookingsControllerTest extends WebTestCase
             parameters: [],
             files: [],
             server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode($expectedBooking->toArray())
+            content: json_encode($expectedBooking)
         );
         $this->assertResponse(
             response: $this->client->getResponse(),
@@ -226,8 +243,12 @@ class BookingsControllerTest extends WebTestCase
         $expectedBooking   = (new Booking())
             ->setId($expectedBookingId)
             ->setPhoneNumber('+1234567890')
-            ->setHouseId(1)
-            ->setComment('Test booking 4');
+            ->setHouse(
+                (new House())
+                    ->setId(1)
+            )
+            ->setComment('Test booking 4')
+            ->toArray();
 
         $this->assertNull(
             self::$bookingsRepository
@@ -240,7 +261,7 @@ class BookingsControllerTest extends WebTestCase
             parameters: [],
             files: [],
             server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode($expectedBooking->toArray())
+            content: json_encode($expectedBooking)
         );
         $this->assertResponse(
             response: $this->client->getResponse(),
@@ -274,7 +295,10 @@ class BookingsControllerTest extends WebTestCase
         );
         $booking = (new Booking())
             ->setId($expectedBookingId)
-            ->setHouseId(1)
+            ->setHouse(
+                (new House())
+                    ->setId(1)
+            )
             ->setComment('Test booking 4')
             ->toArray();
 
@@ -368,27 +392,31 @@ class BookingsControllerTest extends WebTestCase
     public function testReplaceBookingSuccess(): void
     {
         $bookingId  = 1;
-        $oldBooking = self::$bookingsRepository->findBookingById($bookingId);
+        $oldBooking = self::$bookingsRepository->findBookingById($bookingId)->toArray();
         $newBooking = (new Booking())
             ->setId($bookingId)
             ->setPhoneNumber('+1234567890')
-            ->setHouseId(4)
-            ->setComment('Replaced booking');
+            ->setHouse(
+                (new House())
+                    ->setId(4)
+            )
+            ->setComment('Replaced booking')
+            ->toArray();
 
         $this->assertNotNull($oldBooking);
 
         $this->assertFalse(
             self::$housesRepository
-                ->findHouseById($oldBooking->getHouseId())
+                ->findHouseById($oldBooking['house_id'])
                 ->isAvailable()
         );
         $this->assertTrue(
             self::$housesRepository
-                ->findHouseById($newBooking->getHouseId())
+                ->findHouseById($newBooking['house_id'])
                 ->isAvailable()
         );
         $this->assertEquals(
-            $oldBooking->getComment(),
+            $oldBooking['comment'],
             self::$bookingsRepository
                 ->findBookingById($bookingId)
                 ->getComment()
@@ -400,7 +428,7 @@ class BookingsControllerTest extends WebTestCase
             parameters: [],
             files: [],
             server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode($newBooking->toArray())
+            content: json_encode($newBooking)
         );
         $this->assertResponse(
             response: $this->client->getResponse(),
@@ -410,16 +438,16 @@ class BookingsControllerTest extends WebTestCase
 
         $this->assertTrue(
             self::$housesRepository
-                ->findHouseById($oldBooking->getHouseId())
+                ->findHouseById($oldBooking['house_id'])
                 ->isAvailable()
         );
         $this->assertFalse(
             self::$housesRepository
-                ->findHouseById($newBooking->getHouseId())
+                ->findHouseById($newBooking['house_id'])
                 ->isAvailable()
         );
         $this->assertEquals(
-            $newBooking->getComment(),
+            $newBooking['comment'],
             self::$bookingsRepository
                 ->findBookingById($bookingId)
                 ->getComment()
@@ -516,7 +544,8 @@ class BookingsControllerTest extends WebTestCase
         $bookingId     = 1;
         $bookedHouseId = self::$bookingsRepository
             ->findBookingById($bookingId)
-            ->getHouseId();
+            ->getHouse()
+            ->getId();
 
         $this->assertFalse(
             self::$housesRepository

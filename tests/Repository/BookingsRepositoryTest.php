@@ -2,49 +2,65 @@
 namespace App\Tests\Repository;
 
 use App\Entity\Booking;
+use App\Entity\House;
 use App\Repository\BookingsRepository;
-use PHPUnit\Framework\TestCase;
-use ReflectionClass;
+use App\Repository\HousesRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-class BookingsRepositoryTest extends TestCase
+class BookingsRepositoryTest extends KernelTestCase
 {
-    private string $filePath = __DIR__ . '/../Resources/~$test_bookings.csv';
-
     /** @var Booking[] */
     private array $bookings = [];
+
+    /** @var HousesRepository $housesRepository */
+    private HousesRepository $housesRepository;
     /** @var BookingsRepository $bookingsRepository */
     private BookingsRepository $bookingsRepository;
 
+    private EntityManagerInterface $entityManager;
+
+    private const HOUSES_CSV_PATH = __DIR__ . '/../Resources/test_houses.csv';
+
     protected function setUp(): void
     {
-        if (file_exists($this->filePath)) {
-            unlink($this->filePath);
-        }
+        $kernel = self::bootKernel();
+        $this->assertSame('test', $kernel->getEnvironment());
+
+        $this->entityManager = static::getContainer()->get('doctrine')->getManager();
+        $this->truncateTables();
+
+        $this->bookingsRepository = $this->entityManager->getRepository(Booking::class);
+        $this->housesRepository   = $this->entityManager->getRepository(House::class);
+        $this->housesRepository->loadFromCsv(self::HOUSES_CSV_PATH);
 
         $this->bookings[] = (new Booking())
-            ->setHouseId(1)
+            ->setId(1)
             ->setPhoneNumber("+1234567890")
-            ->setComment('Test comment 1');
-
+            ->setComment('Test comment 1')
+            ->setHouse(
+                $this->housesRepository->findHouseById(1)
+            );
         $this->bookings[] = (new Booking())
-            ->setHouseId(2)
-            ->setPhoneNumber("+0987654321");
-
+            ->setId(2)
+            ->setPhoneNumber("+0987654321")
+            ->setHouse(
+                $this->housesRepository->findHouseById(2)
+            );
         $this->bookings[] = (new Booking())
-            ->setHouseId(3)
+            ->setId(3)
             ->setPhoneNumber("+1122334455")
-            ->setComment('Test comment 3');
-
-        $this->bookingsRepository = new BookingsRepository($this->filePath);
+            ->setComment('Test comment 3')
+            ->setHouse(
+                $this->housesRepository->findHouseById(3)
+            );
     }
 
-    protected function tearDown(): void
+    private function truncateTables(): void
     {
-        if (file_exists($this->filePath)) {
-            unlink($this->filePath);
-        }
-
-        $this->bookings = [];
+        $connection = $this->entityManager->getConnection();
+        $connection->executeStatement('TRUNCATE TABLE booking RESTART IDENTITY CASCADE');
+        $connection->executeStatement('TRUNCATE TABLE house RESTART IDENTITY CASCADE');
     }
 
     private function assertBookingEquals(Booking $expected, Booking $actual): void
@@ -54,8 +70,8 @@ class BookingsRepositoryTest extends TestCase
             $actual->getId()
         );
         $this->assertEquals(
-            $expected->getHouseId(),
-            $actual->getHouseId()
+            $expected->getHouse()->getId(),
+            $actual->getHouse()->getId()
         );
         $this->assertEquals(
             $expected->getPhoneNumber(),
@@ -154,9 +170,12 @@ class BookingsRepositoryTest extends TestCase
 
         # After updating booking
         $expectedBooking = $this->bookings[$bookingId - 1];
-        $expectedBooking->setPhoneNumber("+5555555555");
-        $expectedBooking->setHouseId(1);
-        $expectedBooking->setComment("Test comment 1");
+        $expectedBooking
+            ->setPhoneNumber("+5555555555")
+            ->setComment("Test comment 1")
+            ->setHouse(
+                $this->housesRepository->findHouseById(1)
+            );
 
         $this->bookingsRepository->updateBooking($expectedBooking);
 
@@ -184,7 +203,7 @@ class BookingsRepositoryTest extends TestCase
             $this->bookingsRepository->findAllBookings()
         );
 
-        $this->bookingsRepository->deleteBooking($bookingId);
+        $this->bookingsRepository->deleteBookingById($bookingId);
 
         $this->assertCount(
             $countAfter,
@@ -195,21 +214,53 @@ class BookingsRepositoryTest extends TestCase
         );
     }
 
-    public function testSaveBookingsPrivate(): void
+    public function testLoadFromCsv(): void
     {
-        $methodName = 'saveBookings';
+        $countBefore = 0;
+        $countAfter  = count($this->bookings);
 
-        $reflection = new ReflectionClass(
-            $this->bookingsRepository
+        $this->assertCount(
+            $countBefore,
+            $this->bookingsRepository->findAllBookings()
         );
-        $method = $reflection->getMethod($methodName);
 
-        $this->assertTrue(
-            method_exists(
-                $this->bookingsRepository,
-                $methodName
-            ),
+        // Create a CSV file with test data
+        $bookingsCsvPath = __DIR__ . '/../Resources/~$test_bookings.csv';
+        $handle          = fopen($bookingsCsvPath, 'w');
+        fputcsv(
+            $handle,
+            $this->bookingsRepository->getFields(),
+            ',',
+            '"',
+            '\\'
         );
-        $this->assertTrue($method->isPrivate());
+
+        foreach ($this->bookings as $booking) {
+            fputcsv(
+                $handle,
+                $booking->toArray(),
+                ',',
+                '"',
+                '\\'
+            );
+        }
+        fclose($handle);
+
+        // Load the CSV file into the repository
+        $this->bookingsRepository->loadFromCsv($bookingsCsvPath);
+
+        // Check that the bookings were loaded correctly
+        $bookings = $this->bookingsRepository->findAllBookings();
+
+        $this->assertCount(
+            $countAfter,
+            $bookings
+        );
+        for ($i = 0; $i < $countAfter; $i++) {
+            $this->assertBookingEquals(
+                expected: $this->bookings[$i],
+                actual: $bookings[$i]
+            );
+        }
     }
 }
