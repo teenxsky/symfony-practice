@@ -1,19 +1,5 @@
-# Install dev dependencies stage
-FROM composer:latest AS deps
-WORKDIR /app
-
-RUN --mount=type=bind,source=composer.json,target=composer.json \
-    --mount=type=bind,source=composer.lock,target=composer.lock \
-    --mount=type=cache,target=/tmp/cache \
-    composer install --no-interaction --no-scripts
-
-
-# Build PHP app stage
-FROM php:8.2-fpm-alpine AS builder
+FROM php:8.4-fpm-alpine
 WORKDIR /var/www/app
-
-COPY --from=deps /app/vendor ./vendor
-COPY . .
 
 RUN apk update && apk add --no-cache \
     libzip-dev \
@@ -31,7 +17,13 @@ RUN docker-php-ext-install \
     pdo_pgsql \
     pgsql
 
-RUN mkdir -p /var/www/app/var && \
-    chown -R www-data:www-data /var/www/app/var
+RUN apk add --no-cache autoconf g++ make linux-headers musl-dev \
+    && pecl install igbinary xdebug-3.4.1
+
+COPY . .
+
+COPY ./.docker/dev/php/entrypoint.sh /usr/local/entrypoint.sh
+RUN chmod +x /usr/local/entrypoint.sh
+ENTRYPOINT ["sh", "/usr/local/entrypoint.sh"]
 
 CMD [ "php-fpm", "--fpm-config", "/usr/local/etc/php-fpm.conf" ]

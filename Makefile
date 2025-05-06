@@ -11,7 +11,7 @@ up:
 
 # Starts the services and logs are displayed.
 up-logs:
-	$(DOCKER_COMPOSE) up --no-deps --build
+	$(DOCKER_COMPOSE) up
 
 # Stops the services
 down:
@@ -41,6 +41,23 @@ make-dump:
 make-entity:
 	$(DOCKER_COMPOSE) exec backend bash -c "bin/console make:entity"
 
+# Makes a new controller in the backend container
+make-controller:
+	$(DOCKER_COMPOSE) exec backend bash -c "bin/console make:controller"
+
+# Install new package in the backend container
+install:
+	$(DOCKER_COMPOSE) exec backend bash -c "composer require $(dep-name)"
+
 # Open shell in the backend container
 shell-backend:
 	$(DOCKER_COMPOSE) exec backend bash
+
+# Run all tests in the backend container
+run-tests:
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpunit"
+
+add-dependency:
+	@bash -c 'read -p "Enter the dependency name: " dep_name && \
+	echo "Installing dependency: $$dep_name" && \
+	$(DOCKER_COMPOSE) exec backend bash -c "composer require $$dep_name"'
