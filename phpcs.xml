@@ -54,4 +54,10 @@
             <property name="maxPercentage" value="50"/>
         </properties>
     </rule>
+
+    <rule ref="Generic.Metrics.NestingLevel">
+        <properties>
+            <property name="absoluteNestingLevel" value="3"/>
+        </properties>
+    </rule>
 </ruleset>
