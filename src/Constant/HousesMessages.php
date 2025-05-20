@@ -1,7 +1,8 @@
 <?php
-namespace App\Constant;
 
-use App\Constant\ApiMessages;
+declare (strict_types=1);
+
+namespace App\Constant;
 
 /**
  * Class HousesMessages

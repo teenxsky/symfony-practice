@@ -1,4 +1,7 @@
 <?php
+
+declare (strict_types=1);
+
 namespace App\Controller;
 
 use App\Constant\BookingsMessages;
@@ -26,13 +29,14 @@ class BookingsController extends AbstractController
         private HousesRepository $housesRepository,
         private SerializerInterface $serializer,
         private ValidatorInterface $validator
-    ) {}
+    ) {
+    }
 
     #[Route('/', name: 'bookings_list', methods: ['GET'])]
     public function listBookings(): JsonResponse
     {
         $bookingsArray = array_map(
-            fn($booking) => $booking->toArray(),
+            fn ($booking) => $booking->toArray(),
             $this->bookingsRepository->findAllBookings()
         );
 
@@ -47,11 +51,13 @@ class BookingsController extends AbstractController
             return $booking;
         }
 
-        if ($error = $this->validateBooking($booking)) {
+        $error = $this->validateBooking($booking);
+        if ($error) {
             return $error;
         }
 
-        if ($error = $this->checkHouseAvailability($booking->getHouse())) {
+        $error = $this->checkHouseAvailability($booking->getHouse());
+        if ($error) {
             return $error;
         }
 
@@ -98,11 +104,13 @@ class BookingsController extends AbstractController
 
         $booking->setId($id);
 
-        if ($error = $this->validateBooking($booking)) {
+        $error = $this->validateBooking($booking);
+        if ($error) {
             return $error;
         }
 
-        if ($error = $this->switchHouse($existingBooking, $booking)) {
+        $error = $this->switchHouse($existingBooking, $booking);
+        if ($error) {
             return $error;
         }
 
@@ -131,26 +139,25 @@ class BookingsController extends AbstractController
 
         $existingBooking
             ->setPhoneNumber(
-                $booking->getPhoneNumber() ??
-                $existingBooking->getPhoneNumber()
+                $booking->getPhoneNumber() ?? $existingBooking->getPhoneNumber()
             )
             ->setComment(
-                $booking->getComment() ??
-                $existingBooking->getComment()
+                $booking->getComment() ?? $existingBooking->getComment()
             );
 
         if (
-            $booking->getHouse() &&
-            $existingBooking->getHouse()->getId() !== $booking->getHouse()->getId()
+            $booking->getHouse() && $existingBooking->getHouse()->getId() !== $booking->getHouse()->getId()
         ) {
-            if ($error = $this->switchHouse($existingBooking, $booking)) {
+            $error = $this->switchHouse($existingBooking, $booking);
+            if ($error) {
                 return $error;
             }
 
             $existingBooking->setHouse($booking->getHouse());
         }
 
-        if ($error = $this->validateBooking($existingBooking)) {
+        $error = $this->validateBooking($existingBooking);
+        if ($error) {
             return $error;
         }
 
@@ -187,8 +194,8 @@ class BookingsController extends AbstractController
         if ($request->getContentTypeFormat() !== 'json') {
             return new JsonResponse(
                 BookingsMessages::buildMessage(
-                    "Deserialization failed",
-                    ["Unsupported content type"]
+                    'Deserialization failed',
+                    ['Unsupported content type']
                 ),
                 Response::HTTP_UNSUPPORTED_MEDIA_TYPE
             );
@@ -219,7 +226,7 @@ class BookingsController extends AbstractController
         } catch (NotEncodableValueException | UnexpectedValueException $e) {
             return new JsonResponse(
                 BookingsMessages::buildMessage(
-                    "Deserialization failed",
+                    'Deserialization failed',
                     [$e->getMessage()]
                 ),
                 Response::HTTP_BAD_REQUEST
@@ -278,7 +285,8 @@ class BookingsController extends AbstractController
             return null;
         }
 
-        if ($error = $this->checkHouseAvailability($newHouse)) {
+        $error = $this->checkHouseAvailability($newHouse);
+        if ($error) {
             return $error;
         }
 

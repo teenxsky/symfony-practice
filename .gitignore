@@ -41,3 +41,8 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+###> friendsofphp/php-cs-fixer ###
+/.php-cs-fixer.php
+/.php-cs-fixer.cache
+###< friendsofphp/php-cs-fixer ###

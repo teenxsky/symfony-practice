@@ -1,4 +1,7 @@
 <?php
+
+declare (strict_types=1);
+
 namespace App\Tests\Controller;
 
 use App\Constant\BookingsMessages;
@@ -8,6 +11,7 @@ use App\Entity\House;
 use App\Repository\BookingsRepository;
 use App\Repository\HousesRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Override;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -30,6 +34,7 @@ class BookingsControllerTest extends WebTestCase
     private const API_BOOKINGS    = '/api/v1/bookings/';
     private const API_BOOKINGS_ID = '/api/v1/bookings/%d';
 
+    #[Override]
     public static function setUpBeforeClass(): void
     {
         self::initializeDatabase();
@@ -54,7 +59,8 @@ class BookingsControllerTest extends WebTestCase
         self::$bookingsRepository->loadFromCsv(self::BOOKINGS_CSV_PATH);
     }
 
-    protected function setUp(): void
+    #[Override]
+    public function setUp(): void
     {
         $this->client        = static::createClient();
         $this->entityManager = $this->client->getContainer()->get('doctrine')->getManager();
@@ -110,7 +116,7 @@ class BookingsControllerTest extends WebTestCase
     public function testListBookings(): void
     {
         $expectedBookings = array_map(
-            fn($booking) => $booking->toArray(),
+            fn ($booking) => $booking->toArray(),
             self::$bookingsRepository->findAllBookings()
         );
 

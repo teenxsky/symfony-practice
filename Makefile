@@ -78,6 +78,57 @@ shell-backend:
 	$(DOCKER_COMPOSE) exec backend bash
 
 
+#--------------- LINTING COMMANDS ---------------#
+
+# Run all php linters
+run-lint:
+	@echo "\033[1;34mPHPCS Linter\033[0m"
+	@echo "\033[1;33m------------------------\033[0m"
+	make phpcs
+	@echo "\033[1;34mPHPCS-Fixer Linter\033[0m"
+	@echo "\033[1;33m------------------------\033[0m"
+	make phpcs-fixer
+	@echo "\033[1;34mPSALM Linter\033[0m"
+	@echo "\033[1;33m------------------------\033[0m"
+	make psalm
+
+# Run all fixers
+run-fix:
+	@echo "\033[1;34mPHPCS Fixer\033[0m"
+	@echo "\033[1;33m------------------------\033[0m"
+	make phpcs-fix
+	@echo "\033[1;34mPHPCS-Fixer Fixer\033[0m"
+	@echo "\033[1;33m------------------------\033[0m"
+	make phpcs-fixer-fix
+	@echo "\033[1;34mPSALM Fixer\033[0m"
+	@echo "\033[1;33m------------------------\033[0m"
+	make psalm-fix
+
+# Run php linting by CodeSniffer
+phpcs:
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpcs --standard='phpcs.xml'"
+
+# Run php fixing errors by CodeSniffer 
+phpcs-fix:
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/phpcbf --standard='phpcs.xml'"
+
+# Run php linting by CsFixer
+phpcs-fixer:
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/php-cs-fixer fix --verbose --allow-risky=yes --dry-run"
+
+# Run php fixing errors by CsFixer
+phpcs-fixer-fix:
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/php-cs-fixer fix --verbose --allow-risky=yes"
+
+# Run php linting by Psalm
+psalm:
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/psalm --diff"
+
+# Run php fixing errors by Psalm
+psalm-fix:
+	$(DOCKER_COMPOSE) exec backend bash -c "vendor/bin/psalm --alter --issues=MissingOverrideAttribute,MissingReturnType,PossiblyUnusedMethod,ClassMustBeFinal --dry-run"
+
+
 #--------------- TESTING COMMANDS ---------------#
 
 # Run all tests in the backend container
@@ -138,6 +189,16 @@ help:
 	@echo "  \033[1;36madd-dependency\033[0m       - Add a new symfony dependency"
 	@echo "  \033[1;36mshell-backend\033[0m        - Open backend container shell"
 	@echo "  \033[1;33m------------------------\033[0m"
+	@echo "  \033[1;32mLinting commands:\033[0m"
+	@echo "  \033[1;36mrun-lint\033[0m             - Run all php linters"
+	@echo "  \033[1;36mrun-fix\033[0m              - Run all fixers"
+	@echo "  \033[1;36mphpcs\033[0m                - Run php linting by CodeSniffer"
+	@echo "  \033[1;36mphpcs-fix\033[0m            - Run php fixing errors by CodeSniffer"
+	@echo "  \033[1;36mphpcs-fixer\033[0m          - Run php linting by CsFixer"
+	@echo "  \033[1;36mphpcs-fixer-fix\033[0m      - Run php fixing errors by CsFixer"
+	@echo "  \033[1;36mpsalm\033[0m                - Run php linting by Psalm"
+	@echo "  \033[1;36mpsalm-fix\033[0m            - Run php fixing errors by Psalm"
+	@echo "  \033[1;33m------------------------\033[0m"
 	@echo "  \033[1;32mTesting commands:\033[0m"
 	@echo "  \033[1;36mrun-tests\033[0m            - Run all tests in the backend container"
 	@echo "  \033[1;36mrun-tests-repository\033[0m - Run repository tests in the backend container"
@@ -148,4 +209,4 @@ help:
 	@echo "  \033[1;36mxdebug-enable\033[0m        - Enable Xdebug"
 	@echo "  \033[1;36mxdebug-disable\033[0m       - Disable Xdebug"
 
-.PHONY: build up up-logs down clean clean-volumes make-migrations create-db migrate-db create-test-db migrate-test-db create-dump create-entity create-controller add-dependency shell-backend run-tests run-tests-repository run-tests-controller xdebug-status xdebug-enable xdebug-disable help
+.PHONY: build up up-logs down clean clean-volumes make-migrations create-db migrate-db create-test-db migrate-test-db create-dump create-entity create-controller add-dependency shell-backend run-tests run-tests-repository run-tests-controller xdebug-status xdebug-enable xdebug-disable help run-lint phpcs phpcs-fix phpcs-fixer phpcs-fixer-fix run-fix psalm

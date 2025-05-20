@@ -1,10 +1,14 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Tests\Controller;
 
 use App\Constant\HousesMessages;
 use App\Entity\House;
 use App\Repository\HousesRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Override;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,6 +28,7 @@ class HousesControllerTest extends WebTestCase
     private const API_HOUSES    = '/api/v1/houses/';
     private const API_HOUSES_ID = '/api/v1/houses/%d';
 
+    #[Override]
     public static function setUpBeforeClass(): void
     {
         self::initializeDatabase();
@@ -44,7 +49,8 @@ class HousesControllerTest extends WebTestCase
         self::$housesRepository->loadFromCsv(self::HOUSES_CSV_PATH);
     }
 
-    protected function setUp(): void
+    #[Override]
+    public function setUp(): void
     {
         $this->client        = static::createClient();
         $this->entityManager = $this->client->getContainer()->get('doctrine')->getManager();
@@ -99,7 +105,7 @@ class HousesControllerTest extends WebTestCase
     public function testListHouses(): void
     {
         $expectedHouses = array_map(
-            fn($house) => $house->toArray(),
+            fn ($house) => $house->toArray(),
             self::$housesRepository->findAllHouses()
         );
 
@@ -180,7 +186,7 @@ class HousesControllerTest extends WebTestCase
     public function testAddHouseSuccess(): void
     {
         $expectedHouseId = 5;
-        $expectedHouse   = (new House)
+        $expectedHouse   = (new House())
             ->setId($expectedHouseId)
             ->setIsAvailable(true)
             ->setBedroomsCount(12)
@@ -242,7 +248,7 @@ class HousesControllerTest extends WebTestCase
                 ],
             ]
         );
-        $house = (new House)
+        $house = (new House())
             ->setId($expectedHouseId)
             ->setBedroomsCount(21)
             ->setPricePerNight(6000)
@@ -288,7 +294,7 @@ class HousesControllerTest extends WebTestCase
     public function testReplaceHouseSuccess(): void
     {
         $houseId  = 1;
-        $newHouse = (new House)
+        $newHouse = (new House())
             ->setId($houseId)
             ->setIsAvailable(true)
             ->setBedroomsCount(12)

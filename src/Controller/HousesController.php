@@ -1,4 +1,7 @@
 <?php
+
+declare (strict_types=1);
+
 namespace App\Controller;
 
 use App\Constant\HousesMessages;
@@ -22,13 +25,14 @@ class HousesController extends AbstractController
         private HousesRepository $housesRepository,
         private SerializerInterface $serializer,
         private ValidatorInterface $validator
-    ) {}
+    ) {
+    }
 
     #[Route('/', name: 'houses_list', methods: ['GET'])]
     public function listHouses(): JsonResponse
     {
         $housesArray = array_map(
-            fn($house) => $house->toArray(),
+            fn ($house) => $house->toArray(),
             $this->housesRepository->findAllHouses()
         );
 
@@ -43,7 +47,8 @@ class HousesController extends AbstractController
             return $house;
         }
 
-        if ($error = $this->validateHouse($house)) {
+        $error = $this->validateHouse($house);
+        if ($error) {
             return $error;
         }
 
@@ -78,7 +83,7 @@ class HousesController extends AbstractController
         }
 
         $existingHouse = $this->housesRepository->findHouseById($id);
-        if (! $existingHouse) {
+        if (!$existingHouse) {
             return new JsonResponse(
                 HousesMessages::notFound(),
                 Response::HTTP_NOT_FOUND
@@ -87,7 +92,8 @@ class HousesController extends AbstractController
 
         $replacingHouse->setId($id);
 
-        if ($error = $this->validateHouse($replacingHouse)) {
+        $error = $this->validateHouse($replacingHouse);
+        if ($error) {
             return $error;
         }
 
@@ -107,7 +113,7 @@ class HousesController extends AbstractController
         }
 
         $existingHouse = $this->housesRepository->findHouseById($id);
-        if (! $existingHouse) {
+        if (!$existingHouse) {
             return new JsonResponse(
                 HousesMessages::notFound(),
                 Response::HTTP_NOT_FOUND
@@ -116,39 +122,32 @@ class HousesController extends AbstractController
 
         $existingHouse
             ->setIsAvailable(
-                $updatedHouse->isAvailable() ??
-                $existingHouse->isAvailable()
+                $updatedHouse->isAvailable() ?? $existingHouse->isAvailable()
             )
             ->setBedroomsCount(
-                $updatedHouse->getBedroomsCount() ??
-                $existingHouse->getBedroomsCount()
+                $updatedHouse->getBedroomsCount() ?? $existingHouse->getBedroomsCount()
             )
             ->setPricePerNight(
-                $updatedHouse->getPricePerNight() ??
-                $existingHouse->getPricePerNight()
+                $updatedHouse->getPricePerNight() ?? $existingHouse->getPricePerNight()
             )
             ->setHasAirConditioning(
-                $updatedHouse->hasAirConditioning() ??
-                $existingHouse->hasAirConditioning()
+                $updatedHouse->hasAirConditioning() ?? $existingHouse->hasAirConditioning()
             )
             ->setHasWifi(
-                $updatedHouse->hasWifi() ??
-                $existingHouse->hasWifi()
+                $updatedHouse->hasWifi() ?? $existingHouse->hasWifi()
             )
             ->setHasKitchen(
-                $updatedHouse->hasKitchen() ??
-                $existingHouse->hasKitchen()
+                $updatedHouse->hasKitchen() ?? $existingHouse->hasKitchen()
             )
             ->setHasParking(
-                $updatedHouse->hasParking() ??
-                $existingHouse->hasParking()
+                $updatedHouse->hasParking() ?? $existingHouse->hasParking()
             )
             ->setHasSeaView(
-                $updatedHouse->hasSeaView() ??
-                $existingHouse->hasSeaView()
+                $updatedHouse->hasSeaView() ?? $existingHouse->hasSeaView()
             );
 
-        if ($error = $this->validateHouse($existingHouse)) {
+        $error = $this->validateHouse($existingHouse);
+        if ($error) {
             return $error;
         }
 
@@ -164,14 +163,14 @@ class HousesController extends AbstractController
     {
         $house = $this->housesRepository->findHouseById($id);
 
-        if (! $house) {
+        if (!$house) {
             return new JsonResponse(
                 HousesMessages::notFound(),
                 Response::HTTP_NOT_FOUND
             );
         }
 
-        if (! $house->isAvailable()) {
+        if (!$house->isAvailable()) {
             return new JsonResponse(
                 HousesMessages::booked(),
                 Response::HTTP_BAD_REQUEST

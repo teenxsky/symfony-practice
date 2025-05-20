@@ -1,9 +1,10 @@
 <?php
+
+declare (strict_types=1);
+
 namespace App\Entity;
 
 use App\Repository\HousesRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Ignore;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -11,9 +12,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: HousesRepository::class)]
 class House
 {
-    #[ORM\OneToMany(mappedBy: 'house', targetEntity: Booking::class, cascade: ['persist', 'remove'])]
-    private Collection $bookings;
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -61,11 +59,6 @@ class House
     #[Assert\Type('boolean')]
     private ?bool $hasSeaView = null;
 
-    public function __construct()
-    {
-        $this->bookings = new ArrayCollection();
-    }
-
     public function getId(): ?int
     {
         return $this->id;
@@ -74,32 +67,6 @@ class House
     public function setId(int $id): static
     {
         $this->id = $id;
-
-        return $this;
-    }
-
-    public function getBookings(): Collection
-    {
-        return $this->bookings;
-    }
-
-    public function addBooking(Booking $booking): static
-    {
-        if (! $this->bookings->contains($booking)) {
-            $this->bookings->add($booking);
-            $booking->setHouse($this);
-        }
-
-        return $this;
-    }
-
-    public function removeBooking(Booking $booking): static
-    {
-        if ($this->bookings->removeElement($booking)) {
-            if ($booking->getHouse() === $this) {
-                $booking->setHouse(null);
-            }
-        }
 
         return $this;
     }
@@ -219,7 +186,7 @@ class House
      *     has_sea_view: bool
      * }
      */
-    public function toArray(): array
+    public function toArray(): ?array
     {
         return [
             'id'                   => $this->getId(),
