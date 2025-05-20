@@ -12,11 +12,13 @@ namespace App\Constant;
  */
 class BookingsMessages extends ApiMessages
 {
-    public const CREATED   = 'Booking created!';
-    public const REPLACED  = 'Booking replaced!';
-    public const UPDATED   = 'Booking updated!';
-    public const DELETED   = 'Booking deleted!';
-    public const NOT_FOUND = 'Booking not found.';
+    public const CREATED         = 'Booking created!';
+    public const REPLACED        = 'Booking replaced!';
+    public const UPDATED         = 'Booking updated!';
+    public const DELETED         = 'Booking deleted!';
+    public const NOT_FOUND       = 'Booking not found.';
+    public const PAST_START_DATE = 'Start date cannot be in the past';
+    public const PAST_END_DATE   = 'Start date cannot be after end date';
 
     /**
      * @return array{message: string, errors?: array}
